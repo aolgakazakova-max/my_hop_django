@@ -1,6 +1,6 @@
 from django.db.models import Avg, Q
-from django.shortcuts import render
-from django.views.generic import ListView
+from django.views.generic import ListView, DetailView
+
 from .models import Product, Category
 
 
@@ -17,14 +17,14 @@ class ProductListView(ListView):
         qs = (
             Product.objects.filter(is_active=True)
             .select_related('category')
-            .annotate(avg_price=Avg('price'))
+            .annotate(avg_rating=Avg('reviews__rating'))
         )
 
         query = self.request.GET.get('q')
         if query:
             qs = qs.filter(Q(name__icontains=query) | Q(description__icontains=query))
 
-        categories = self.request.GET.getlist('categories')
+        categories = self.request.GET.getlist('category')
 
         if categories:
             qs = qs.filter(category__slug__in=categories)
@@ -42,22 +42,48 @@ class ProductListView(ListView):
             'new': '-created_at',
             'price_asc': 'price',
             'price_desc': '-price',
-            'rating': 'rating',
+            'rating': '-avg_rating',
         }
         sort = self.request.GET.get('sort', 'new')
-        return  qs.order_by(sort_map[sort])
+        return qs.order_by(sort_map.get(sort, '-created_at'))
 
 
     def get_context_data(self,  **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['categories'] = Category.objects.all()
-        ctx['query'] = self.request.GET.get('q')
-        ctx['min_price'] = self.request.GET.get('min_price')
-        ctx['max_price'] = self.request.GET.get('max_price')
+        ctx['query'] = self.request.GET.get('q', '')
+        ctx['min_price'] = self.request.GET.get('min_price', '')
+        ctx['max_price'] = self.request.GET.get('max_price', '')
         ctx['selected_categories'] = self.request.GET.getlist('category')
         ctx['current_sort'] = self.request.GET.get('sort', 'new')
 
         params = self.request.GET.copy()
         params.pop('page', None)
         ctx['querystring'] = params.urlencode()
+        return ctx
+
+
+class ProductDetailView(DetailView):
+    model = Product
+    template_name = 'product-detail.html'
+    context_object_name = 'product'
+
+    def get_queryset(self):
+        return (
+            Product.objects.filter(is_active=True)
+            .select_related('category')
+            .annotate(avg_rating=Avg('reviews__rating'))
+        )
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['reviews'] = self.object.reviews.select_related('user')
+        ctx['review_form'] = None #TODO ReviewForm()
+
+        user = self.request.user
+        ctx['can_review'] = (
+            user.is_authenticated
+            #TODO Логику покупки
+        )
+
         return ctx

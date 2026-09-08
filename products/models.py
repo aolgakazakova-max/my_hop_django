@@ -37,7 +37,7 @@ class Product(models.Model):
     )
     image = models.ImageField(upload_to='products/%Y/%m')
     is_active = models.BooleanField(default=True)
-    stock = models.PositiveIntegerField(default=0)
+    stock = models.PositiveIntegerField(default=100)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -50,8 +50,5 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
-
-
-    # def get_absolute_url(self):
-    #     return reverse('products:detail', kwargs={'slug': self.slug})
-    #
+    def get_absolute_url(self):
+        return reverse('products:detail', kwargs={'slug': self.slug})
