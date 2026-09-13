@@ -52,8 +52,10 @@
     <div class="checkout-container">
         <h1 class="checkout-title">Order Details</h1>
 
-        <form id="checkout-form">
-            <!-- Shipping Information -->
+        <form id="checkout-form" method="post">
+    {% csrf_token %}
+
+    <!-- Shipping Information -->
             <section class="checkout-section">
                 <h2 class="checkout-section__title">Shipping information</h2>
                 <div class="checkout-form-group">
@@ -70,7 +72,7 @@
                 </div>
                 <div class="checkout-form-group">
                     <label for="address">Shipping address</label>
-                    <textarea id="address" name="address" class="Textarea" placeholder="Value" rows="3" required></textarea>
+                    <textarea id="address" name="shipping_address" class="Textarea" placeholder="Value" rows="3" required></textarea>
                 </div>
             </section>
 
@@ -102,7 +104,7 @@
                 <div class="summary-details">
                     <div class="summary-total">
                         <p>Total</p>
-                        <p>$32.95</p>
+                        <p>{{ cart.get_total_price }}</p>
                     </div>
                     <button type="submit" class="button button--primary button--pay">Pay</button>
                 </div>

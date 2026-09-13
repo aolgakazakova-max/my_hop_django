@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Редактирование отзыва | Hop & Barley{% endblock %}
+
+{% block content %}
+<div class="container">
+    <section class="review-form-section">
+        <h1>Редактировать отзыв</h1>
+
+        <form method="post">
+            {% csrf_token %}
+
+            {{ form.as_p }}
+
+            <button type="submit" class="button button--primary">
+                Сохранить изменения
+            </button>
+        </form>
+
+        <p>
+            <a href="{% url 'products:detail' review.product.slug %}">
+                Вернуться к товару
+            </a>
+        </p>
+    </section>
+</div>
+{% endblock %}
