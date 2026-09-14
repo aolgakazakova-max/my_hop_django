@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Личный кабинет — Hop & Barley{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h1>Личный кабинет</h1>
+
+    <p><strong>Пользователь:</strong> {{ request.user.username }}</p>
+
+    <p><strong>Email:</strong> {{ request.user.email }}</p>
+
+    <p><strong>ФИО:</strong> {{ profile.full_name|default:"Не указано" }}</p>
+
+    <p><strong>Телефон:</strong> {{ profile.phone|default:"Не указан" }}</p>
+
+    <p><strong>Город:</strong> {{ profile.city|default:"Не указан" }}</p>
+
+    <p><strong>Адрес:</strong> {{ profile.address|default:"Не указан" }}</p>
+
+</div>
+
+{% endblock %}
+

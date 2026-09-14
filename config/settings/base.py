@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 from pathlib import Path
+
+from django.conf.global_settings import EMAIL_BACKEND, LOGIN_URL
 from dotenv import load_dotenv
 import os
 
@@ -52,8 +54,10 @@ INSTALLED_APPS += [
     'payments',
 
 ]
-
-
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+DEFAULT_FROM_EMAIL = 'shop@hopandbarley.local'
+LOGIN_URL = 'users:login'
+LOGOUT_URL = 'users:logout'
 
 
 
@@ -81,7 +85,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'orders.context_proccessors.cart',
+                'orders.context_processors.cart',
             ],
         },
     },
@@ -136,8 +140,3 @@ MEDIA_URL = '/media/'
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}

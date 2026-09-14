@@ -1,19 +1,61 @@
 from django import forms
 
-from .models import Order
 
+class CheckoutForm(forms.Form):
+    PAYMENT_CHOICES = (
+        ('debit', 'Debit card'),
+        ('wallet', 'Wallet card'),
+        ('cod', 'Cash on delivery'),
+    )
 
-class OrderForm(forms.ModelForm):
-    class Meta:
-        model = Order
-        fields = ['shipping_address']
+    full_name = forms.CharField(
+        label='Full name',
+        widget=forms.TextInput(
+            attrs={
+                'class': 'Input',
+                'placeholder': 'Full name',
+            }
+        ),
+    )
 
-        widgets = {
-            'shipping_address': forms.Textarea(
-                attrs={
-                    'rows': 4,
-                    'placeholder': 'Введите адрес доставки...',
-                }
-            ),
-        }
+    phone_number = forms.CharField(
+        label='Phone number',
+        widget=forms.TextInput(
+            attrs={
+                'class': 'Input',
+                'placeholder': 'Phone number',
+            }
+        ),
+    )
+
+    city = forms.CharField(
+        label='City',
+        widget=forms.TextInput(
+            attrs={
+                'class': 'Input',
+                'placeholder': 'City',
+            }
+        ),
+    )
+
+    address = forms.CharField(
+        label='Address',
+        widget=forms.TextInput(
+            attrs={
+                'class': 'Input',
+                'placeholder': 'Address',
+            }
+        ),
+    )
+
+    payment_type = forms.ChoiceField(
+        label='Payment method',
+        choices=PAYMENT_CHOICES,
+        widget=forms.Select(
+            attrs={
+                'class': 'Input',
+            }
+        ),
+    )
+
 

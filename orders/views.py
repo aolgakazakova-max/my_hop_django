@@ -6,8 +6,8 @@ from django.views.decorators.http import require_POST
 from products.models import Product
 
 from .cart import Cart
-from .forms import OrderForm
-from .models import Order, OrderItem
+from .forms import CheckoutForm
+from .services import OutOfStock, create_order
 
 
 def cart_detail(request):
@@ -16,7 +16,9 @@ def cart_detail(request):
     return render(
         request,
         'cart.html',
-        {'cart': cart},
+        {
+            'cart': cart,
+        },
     )
 
 
@@ -36,8 +38,14 @@ def cart_add(request, product_id):
         quantity = 1
 
     if quantity < 1:
-        messages.error(request, 'Количество должно быть не меньше 1.')
-        return redirect('products:detail', slug=product.slug)
+        messages.error(
+            request,
+            'Количество должно быть не меньше 1.',
+        )
+        return redirect(
+            'products:detail',
+            slug=product.slug,
+        )
 
     current_quantity = cart.cart.get(
         str(product.id),
@@ -47,9 +55,13 @@ def cart_add(request, product_id):
     if current_quantity + quantity > product.stock:
         messages.error(
             request,
-            f'Только {product.stock} шт. товара "{product.name}" в наличии.',
+            f'Только {product.stock} шт. товара '
+            f'"{product.name}" в наличии.',
         )
-        return redirect('products:detail', slug=product.slug)
+        return redirect(
+            'products:detail',
+            slug=product.slug,
+        )
 
     cart.add(product, quantity)
 
@@ -82,7 +94,8 @@ def cart_update(request, product_id):
     elif quantity > product.stock:
         messages.error(
             request,
-            f'Только {product.stock} шт. товара "{product.name}" в наличии.',
+            f'Только {product.stock} шт. товара '
+            f'"{product.name}" в наличии.',
         )
 
     else:
@@ -99,9 +112,8 @@ def cart_update(request, product_id):
 def cart_remove(request, product_id):
     cart = Cart(request)
 
-    # Здесь специально НЕ проверяем is_active=True.
-    # Даже если товар стал неактивным,
-    # пользователь должен иметь возможность удалить его из корзины.
+    # Товар можно удалить из корзины,
+    # даже если он стал неактивным.
     product = get_object_or_404(
         Product,
         id=product_id,
@@ -124,57 +136,42 @@ def checkout(request):
     if not cart.cart:
         messages.error(
             request,
-            'Корзина пуста.'
+            'Корзина пуста.',
         )
         return redirect('orders:cart_detail')
 
-    # Проверяем наличие товаров перед оформлением заказа
-    for item in cart:
-        product = item['product']
-        quantity = item['quantity']
-
-        if quantity > product.stock:
-            messages.error(
-                request,
-                f'Недостаточно товара "{product.name}". '
-                f'В наличии: {product.stock} шт.'
-            )
-            return redirect('orders:cart_detail')
-
     if request.method == 'POST':
-        form = OrderForm(request.POST)
+        form = CheckoutForm(request.POST)
 
         if form.is_valid():
-            order = form.save(commit=False)
-            order.user = request.user
-            order.total_price = cart.get_total_price()
-            order.save()
-
-            for item in cart:
-                product = item['product']
-                quantity = item['quantity']
-
-                OrderItem.objects.create(
-                    order=order,
-                    product=product,
-                    quantity=quantity,
-                    price=product.price,
+            try:
+                order = create_order(
+                    user=request.user,
+                    cart=cart,
+                    form=form,
                 )
 
-                product.stock -= quantity
-                product.save(update_fields=['stock'])
+            except OutOfStock as error:
+                messages.error(
+                    request,
+                    str(error),
+                )
+                return redirect('orders:cart_detail')
 
             cart.clear()
 
             messages.success(
                 request,
-                f'Заказ №{order.id} успешно оформлен.'
+                f'Заказ #{order.id} успешно создан.',
             )
 
-            return redirect('orders:cart_detail')
+            return redirect(
+                'orders:order_success',
+                order_id=order.id,
+            )
 
     else:
-        form = OrderForm()
+        form = CheckoutForm()
 
     return render(
         request,
@@ -184,3 +181,4 @@ def checkout(request):
             'form': form,
         },
     )
+
