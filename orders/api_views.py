@@ -1,5 +1,4 @@
 from django.shortcuts import get_object_or_404
-
 from drf_spectacular.utils import extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import IsAuthenticated

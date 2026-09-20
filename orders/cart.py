@@ -2,7 +2,6 @@ from decimal import Decimal
 
 from products.models import Product
 
-
 CART_SESSION_ID = 'cart'
 
 

@@ -1,12 +1,12 @@
 from django.contrib import messages
 from django.db.models import Avg, Q
 from django.shortcuts import redirect
-from django.views.generic import ListView, DetailView
+from django.views.generic import DetailView, ListView
 
 from orders.models import OrderItem
 from reviews.forms import ReviewForm
 
-from .models import Product, Category
+from .models import Category, Product
 
 
 class ProductListView(ListView):

@@ -8,34 +8,42 @@ class RegisterForm(forms.Form):
     username = forms.CharField(
         max_length=150,
         label='Username',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Username',
-        })
+        widget=forms.TextInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Username',
+            }
+        ),
     )
 
     email = forms.EmailField(
         label='Email',
-        widget=forms.EmailInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Email',
-        })
+        widget=forms.EmailInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Email',
+            }
+        ),
     )
 
     password = forms.CharField(
         label='Password',
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Password',
-        })
+        widget=forms.PasswordInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Password',
+            }
+        ),
     )
 
     password_confirm = forms.CharField(
         label='Confirm password',
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Confirm password',
-        })
+        widget=forms.PasswordInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Confirm password',
+            }
+        ),
     )
 
     def clean_username(self):
@@ -59,7 +67,7 @@ class RegisterForm(forms.Form):
         return email
 
     def clean(self):
-        cleaned_data = super().clean()
+        cleaned_data = super().clean() or {}
 
         password = cleaned_data.get('password')
         password_confirm = cleaned_data.get('password_confirm')
@@ -71,6 +79,15 @@ class RegisterForm(forms.Form):
                 )
 
         return cleaned_data
+
+    def save(self):
+        user = User.objects.create_user(
+            username=self.cleaned_data['username'],
+            email=self.cleaned_data['email'],
+            password=self.cleaned_data['password'],
+        )
+
+        return user
 
 
 class ProfileForm(forms.ModelForm):
@@ -84,21 +101,29 @@ class ProfileForm(forms.ModelForm):
         ]
 
         widgets = {
-            'full_name': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Full name',
-            }),
-            'phone': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Phone',
-            }),
-            'city': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'City',
-            }),
-            'address': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Address',
-            }),
+            'full_name': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Full name',
+                }
+            ),
+            'phone': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Phone',
+                }
+            ),
+            'city': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'City',
+                }
+            ),
+            'address': forms.TextInput(
+                attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Address',
+                }
+            ),
         }
 

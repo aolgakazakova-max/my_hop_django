@@ -1,9 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
-
-from config.settings.development import DEBUG
+from django.urls import URLPattern, URLResolver, include, path
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
@@ -13,11 +11,13 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
 )
 
-from .api_urls import router
-from users.api_views import RegisterApiView
+from config.settings.development import DEBUG
 from orders.api_views import CartAPIView
+from users.api_views import RegisterApiView
 
-urlpatterns = [
+from .api_urls import router
+
+urlpatterns: list[URLPattern | URLResolver] = [
     path('admin/', admin.site.urls),
 
     path('', include('products.urls')),
@@ -27,7 +27,7 @@ urlpatterns = [
 ]
 
 
-api_patterns = [
+api_patterns: list[URLPattern | URLResolver] = [
     path('', include(router.urls)),
 
     path(
@@ -56,14 +56,17 @@ api_patterns = [
 
     path(
         'docs/',
-        SpectacularSwaggerView.as_view(url_name='schema'),
+        SpectacularSwaggerView.as_view(
+            url_name='schema',
+        ),
         name='swagger-ui',
     ),
+
     path(
         'cart/',
         CartAPIView.as_view(),
         name='cart-api',
-),
+    ),
 ]
 
 

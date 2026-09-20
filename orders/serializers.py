@@ -2,6 +2,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from products.models import Product
+
 from .models import Order, OrderItem
 
 
@@ -50,6 +51,7 @@ class OrderCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 'Заказ должен содержать хотя бы один элемент'
             )
+
         return data
 
     def create(self, validated_data):
@@ -58,7 +60,7 @@ class OrderCreateSerializer(serializers.Serializer):
         with transaction.atomic():
             order = Order.objects.create(
                 user=user,
-                status=Order.STATUS.PAID,
+                status=Order.Status.PAID,
                 shipping_address=validated_data['shipping_address'],
             )
 
@@ -66,7 +68,7 @@ class OrderCreateSerializer(serializers.Serializer):
 
             for item in validated_data['items']:
                 product = Product.objects.get(
-                    id=item['product_id']
+                    id=item['product_id'],
                 )
 
                 quantity = item['quantity']
@@ -77,7 +79,9 @@ class OrderCreateSerializer(serializers.Serializer):
                     )
 
                 product.stock -= quantity
-                product.save(update_fields=['stock'])
+                product.save(
+                    update_fields=['stock'],
+                )
 
                 OrderItem.objects.create(
                     order=order,
@@ -89,30 +93,12 @@ class OrderCreateSerializer(serializers.Serializer):
                 total += product.price * quantity
 
             order.total_price = total
-            order.save(update_fields=['total_price'])
+            order.save(
+                update_fields=['total_price'],
+            )
 
             return order
 
-class CartItemSerializer(serializers.Serializer):
-    product_id = serializers.IntegerField()
-    product_name = serializers.CharField()
-    price = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-    )
-    quantity = serializers.IntegerField()
-    total_price = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-    )
-
-
-class CartSerializer(serializers.Serializer):
-    items = CartItemSerializer(many=True)
-    total_price = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-    )
 
 class CartItemSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
