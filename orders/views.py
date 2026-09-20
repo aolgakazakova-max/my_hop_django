@@ -7,10 +7,13 @@ from products.models import Product
 
 from .cart import Cart
 from .forms import CheckoutForm
+from .models import Order
 from .services import OutOfStock, create_order
 
 
 def cart_detail(request):
+    """Отображает содержимое корзины."""
+
     cart = Cart(request)
 
     return render(
@@ -24,6 +27,8 @@ def cart_detail(request):
 
 @require_POST
 def cart_add(request, product_id):
+    """Добавляет товар в корзину."""
+
     cart = Cart(request)
 
     product = get_object_or_404(
@@ -75,6 +80,8 @@ def cart_add(request, product_id):
 
 @require_POST
 def cart_update(request, product_id):
+    """Изменяет количество товара в корзине."""
+
     cart = Cart(request)
 
     product = get_object_or_404(
@@ -110,10 +117,10 @@ def cart_update(request, product_id):
 
 @require_POST
 def cart_remove(request, product_id):
+    """Удаляет товар из корзины."""
+
     cart = Cart(request)
 
-    # Товар можно удалить из корзины,
-    # даже если он стал неактивным.
     product = get_object_or_404(
         Product,
         id=product_id,
@@ -131,6 +138,8 @@ def cart_remove(request, product_id):
 
 @login_required
 def checkout(request):
+    """Оформляет заказ из текущей корзины."""
+
     cart = Cart(request)
 
     if not cart.cart:
@@ -148,10 +157,17 @@ def checkout(request):
                 order = create_order(
                     user=request.user,
                     cart=cart,
-                    form=form,
+                    data=form.cleaned_data,
                 )
 
             except OutOfStock as error:
+                messages.error(
+                    request,
+                    str(error),
+                )
+                return redirect('orders:cart_detail')
+
+            except ValueError as error:
                 messages.error(
                     request,
                     str(error),
@@ -182,3 +198,21 @@ def checkout(request):
         },
     )
 
+
+@login_required
+def order_success(request, order_id):
+    """Показывает страницу успешно оформленного заказа."""
+
+    order = get_object_or_404(
+        Order,
+        id=order_id,
+        user=request.user,
+    )
+
+    return render(
+        request,
+        'order_success.html',
+        {
+            'order': order,
+        },
+    )

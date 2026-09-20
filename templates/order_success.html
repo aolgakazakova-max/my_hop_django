@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Order successful | Hop & Barley{% endblock %}
+
+{% block content %}
+
+<main class="checkout-page-wrapper">
+
+    <div class="checkout-container">
+
+        <h1 class="checkout-title">
+            Order successfully placed!
+        </h1>
+
+        <section class="checkout-summary">
+
+            <h2 class="checkout-section__title">
+                Thank you for your purchase!
+            </h2>
+
+            <div class="summary-details">
+
+                <p>
+                    Order number:
+                    <strong>#{{ order.id }}</strong>
+                </p>
+
+                <p>
+                    Total:
+                    <strong>${{ order.total_price }}</strong>
+                </p>
+
+                <p>
+                    Status:
+                    <strong>{{ order.get_status_display }}</strong>
+                </p>
+
+            </div>
+
+            <a
+                href="{% url 'products:list' %}"
+                class="button button--primary"
+            >
+                Continue shopping
+            </a>
+
+        </section>
+
+    </div>
+
+</main>
+
+{% endblock %}

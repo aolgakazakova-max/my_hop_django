@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/6.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
-
+from datetime import timedelta
 from pathlib import Path
 
 from django.conf.global_settings import EMAIL_BACKEND, LOGIN_URL
@@ -44,6 +44,8 @@ INSTALLED_APPS = [
 INSTALLED_APPS +=  [
     'rest_framework',
     'rest_framework.authtoken',
+    'drf_spectacular',
+
 ]
 
 INSTALLED_APPS += [
@@ -54,12 +56,40 @@ INSTALLED_APPS += [
     'payments',
 
 ]
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'shop@hopandbarley.local'
 LOGIN_URL = 'users:login'
 LOGOUT_URL = 'users:logout'
+REST_FRAMEWORK = {
 
+    'DEFAULT_AUTHENTICATION_CLASSES': (
 
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 12,
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.AutoSchema',
+
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+}
+SPECTACULAR_SETTINGS = {
+    'TITLE': "Hop & Barley API",
+    'DESCRIPTION': "RESt API магазина товаров",
+    'VERSION': "1.0.0"
+}
 
 
 
@@ -139,4 +169,4 @@ MEDIA_URL = '/media/'
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
-
+ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')

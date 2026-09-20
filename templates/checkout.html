@@ -12,14 +12,12 @@
             Order Details
         </h1>
 
-
         <form
             id="checkout-form"
             method="post"
         >
 
             {% csrf_token %}
-
 
             <!-- Shipping Information -->
 
@@ -32,7 +30,7 @@
 
                 <div class="checkout-form-group">
 
-                    <label for="id_full_name">
+                    <label for="{{ form.full_name.id_for_label }}">
                         Full Name
                     </label>
 
@@ -49,15 +47,15 @@
 
                 <div class="checkout-form-group">
 
-                    <label for="id_phone">
+                    <label for="{{ form.phone_number.id_for_label }}">
                         Phone number
                     </label>
 
-                    {{ form.phone }}
+                    {{ form.phone_number }}
 
-                    {% if form.phone.errors %}
+                    {% if form.phone_number.errors %}
                         <div class="message message-error">
-                            {{ form.phone.errors }}
+                            {{ form.phone_number.errors }}
                         </div>
                     {% endif %}
 
@@ -66,7 +64,7 @@
 
                 <div class="checkout-form-group">
 
-                    <label for="id_city">
+                    <label for="{{ form.city.id_for_label }}">
                         City
                     </label>
 
@@ -83,15 +81,15 @@
 
                 <div class="checkout-form-group">
 
-                    <label for="id_shipping_address">
+                    <label for="{{ form.address.id_for_label }}">
                         Shipping address
                     </label>
 
-                    {{ form.shipping_address }}
+                    {{ form.address }}
 
-                    {% if form.shipping_address.errors %}
+                    {% if form.address.errors %}
                         <div class="message message-error">
-                            {{ form.shipping_address.errors }}
+                            {{ form.address.errors }}
                         </div>
                     {% endif %}
 
@@ -111,15 +109,19 @@
 
                 <div class="payment-options">
 
-                    {% for value, label in form.payment_method.field.choices %}
+                    {% for value, label in form.payment_type.field.choices %}
 
                         <label class="radio-option">
 
                             <input
                                 type="radio"
-                                name="payment_method"
+                                name="payment_type"
                                 value="{{ value }}"
-                                {% if forloop.first %}checked{% endif %}
+                                {% if form.payment_type.value == value %}
+                                    checked
+                                {% elif not form.payment_type.value and forloop.first %}
+                                    checked
+                                {% endif %}
                             >
 
                             <span class="radio-custom"></span>
@@ -135,9 +137,9 @@
                 </div>
 
 
-                {% if form.payment_method.errors %}
+                {% if form.payment_type.errors %}
                     <div class="message message-error">
-                        {{ form.payment_method.errors }}
+                        {{ form.payment_type.errors }}
                     </div>
                 {% endif %}
 
@@ -186,4 +188,3 @@
 </main>
 
 {% endblock %}
-
