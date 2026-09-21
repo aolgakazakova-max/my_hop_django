@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}Редактирование профиля — Hop & Barley{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h1>Редактирование профиля</h1>
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        {{ form.non_field_errors }}
+
+        {% for field in form %}
+            <div class="form-group">
+
+                {{ field.label_tag }}
+
+                {{ field }}
+
+                {% if field.errors %}
+                    <div class="form-errors">
+                        {{ field.errors }}
+                    </div>
+                {% endif %}
+
+            </div>
+        {% endfor %}
+
+        <button type="submit">
+            Сохранить изменения
+        </button>
+
+    </form>
+
+    <p>
+        <a href="{% url 'users:profile' %}">
+            ← Вернуться в личный кабинет
+        </a>
+    </p>
+
+</div>
+
+{% endblock %}
+

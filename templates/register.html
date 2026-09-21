@@ -6,44 +6,109 @@
 {% block content %}
 
 <div class="auth-background">
-    <img src="{% static 'img/background/pattern.jpg' %}" alt="Background pattern">
+    <img
+        src="{% static 'img/background/pattern.jpg' %}"
+        alt="Background pattern"
+    >
 </div>
 
 <div class="auth-form-container">
+
     <div class="auth-container auth-container--register">
 
         <div class="Legend">
-            <h1 class="auth-title">Регистрация</h1>
+            <h1 class="auth-title">
+                Регистрация
+            </h1>
         </div>
 
-        <form class="auth-form" method="POST" id="register-form">
+
+        <form
+            class="auth-form"
+            method="POST"
+            id="register-form"
+        >
+
             {% csrf_token %}
 
-            <div class="InputField">
-                <label for="{{ form.email.id_for_label }}">Почта</label>
-                {{ form.email }}
-                {{ form.email.errors }}
-            </div>
+
+            {% if form.non_field_errors %}
+
+                <div class="form-errors">
+
+                    {{ form.non_field_errors }}
+
+                </div>
+
+            {% endif %}
+
 
             <div class="InputField">
-                <label for="{{ form.password.id_for_label }}">Пароль</label>
-                {{ form.password }}
-                {{ form.password.errors }}
+
+                <label for="{{ form.email.id_for_label }}">
+                    Почта
+                </label>
+
+                {{ form.email }}
+
+                {{ form.email.errors }}
+
             </div>
+
+
+            <div class="InputField">
+
+                <label for="{{ form.password.id_for_label }}">
+                    Пароль
+                </label>
+
+                {{ form.password }}
+
+                {{ form.password.errors }}
+
+            </div>
+
+
+            <div class="InputField">
+
+                <label for="{{ form.password_confirm.id_for_label }}">
+                    Подтвердите пароль
+                </label>
+
+                {{ form.password_confirm }}
+
+                {{ form.password_confirm.errors }}
+
+            </div>
+
 
             <div class="ButtonGroup">
-                <button type="submit" class="button button--primary">
+
+                <button
+                    type="submit"
+                    class="button button--primary"
+                >
                     Зарегистрироваться
                 </button>
+
             </div>
+
         </form>
 
+
         <p class="auth-switch">
+
             Уже есть аккаунт?
-            <a href="{% url 'users:login' %}">Войти</a>
+
+            <a href="{% url 'users:login' %}">
+                Войти
+            </a>
+
         </p>
 
     </div>
+
 </div>
 
 {% endblock %}
+

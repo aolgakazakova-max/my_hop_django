@@ -1,4 +1,5 @@
 from django import forms
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.models import User
 
 from .models import Profile
@@ -6,91 +7,95 @@ from .models import Profile
 
 class RegisterForm(forms.Form):
     username = forms.CharField(
-        max_length=150,
-        label='Username',
-        widget=forms.TextInput(
-            attrs={
-                'class': 'form-control',
-                'placeholder': 'Username',
-            }
-        ),
+        required=False,
+        widget=forms.HiddenInput(),
     )
 
     email = forms.EmailField(
-        label='Email',
+        label='Почта',
         widget=forms.EmailInput(
             attrs={
                 'class': 'form-control',
-                'placeholder': 'Email',
+                'placeholder': 'Почта',
             }
         ),
     )
 
     password = forms.CharField(
-        label='Password',
+        label='Пароль',
         widget=forms.PasswordInput(
             attrs={
                 'class': 'form-control',
-                'placeholder': 'Password',
+                'placeholder': 'Пароль',
             }
         ),
     )
 
     password_confirm = forms.CharField(
-        label='Confirm password',
+        label='Подтвердите пароль',
         widget=forms.PasswordInput(
             attrs={
                 'class': 'form-control',
-                'placeholder': 'Confirm password',
+                'placeholder': 'Подтвердите пароль',
             }
         ),
     )
 
-    def clean_username(self):
-        username = self.cleaned_data['username']
-
-        if User.objects.filter(username=username).exists():
-            raise forms.ValidationError(
-                'This username is already taken.'
-            )
-
-        return username
-
     def clean_email(self):
-        email = self.cleaned_data['email']
+        email = self.cleaned_data['email'].strip().lower()
 
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(
+            email__iexact=email,
+        ).exists():
             raise forms.ValidationError(
-                'This email is already registered.'
+                'Эта почта уже зарегистрирована.'
             )
 
         return email
 
     def clean(self):
-        cleaned_data = super().clean() or {}
+        cleaned_data = super().clean()
 
+        email = cleaned_data.get('email')
         password = cleaned_data.get('password')
-        password_confirm = cleaned_data.get('password_confirm')
+        password_confirm = cleaned_data.get(
+            'password_confirm',
+        )
 
         if password and password_confirm:
             if password != password_confirm:
                 raise forms.ValidationError(
-                    'Passwords do not match.'
+                    'Пароли не совпадают.'
                 )
+
+        if email:
+            username = email.split('@')[0]
+
+            if User.objects.filter(
+                username=username,
+            ).exists():
+                self.add_error(
+                    'username',
+                    'Этот username уже зарегистрирован.',
+                )
+            else:
+                cleaned_data['username'] = username
 
         return cleaned_data
 
     def save(self):
-        user = User.objects.create_user(
-            username=self.cleaned_data['username'],
-            email=self.cleaned_data['email'],
+        email = self.cleaned_data['email']
+        username = self.cleaned_data['username']
+
+        return User.objects.create_user(
+            username=username,
+            email=email,
             password=self.cleaned_data['password'],
         )
 
-        return user
-
 
 class ProfileForm(forms.ModelForm):
+
     class Meta:
         model = Profile
         fields = [
@@ -104,26 +109,64 @@ class ProfileForm(forms.ModelForm):
             'full_name': forms.TextInput(
                 attrs={
                     'class': 'form-control',
-                    'placeholder': 'Full name',
+                    'placeholder': 'ФИО',
                 }
             ),
             'phone': forms.TextInput(
                 attrs={
                     'class': 'form-control',
-                    'placeholder': 'Phone',
+                    'placeholder': 'Телефон',
                 }
             ),
             'city': forms.TextInput(
                 attrs={
                     'class': 'form-control',
-                    'placeholder': 'City',
+                    'placeholder': 'Город',
                 }
             ),
             'address': forms.TextInput(
                 attrs={
                     'class': 'form-control',
-                    'placeholder': 'Address',
+                    'placeholder': 'Адрес',
                 }
             ),
         }
+
+
+class UserPasswordChangeForm(PasswordChangeForm):
+    """
+    Форма смены пароля пользователя.
+    Использует стандартную проверку Django.
+    """
+
+    old_password = forms.CharField(
+        label='Текущий пароль',
+        widget=forms.PasswordInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Текущий пароль',
+            }
+        ),
+    )
+
+    new_password1 = forms.CharField(
+        label='Новый пароль',
+        widget=forms.PasswordInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Новый пароль',
+            }
+        ),
+        help_text='',
+    )
+
+    new_password2 = forms.CharField(
+        label='Подтвердите новый пароль',
+        widget=forms.PasswordInput(
+            attrs={
+                'class': 'form-control',
+                'placeholder': 'Подтвердите новый пароль',
+            }
+        ),
+    )
 

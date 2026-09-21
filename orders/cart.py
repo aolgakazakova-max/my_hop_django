@@ -85,8 +85,6 @@ class Cart:
     def clear(self):
         """Полностью очищает корзину."""
 
-        if CART_SESSION_ID in self.session:
-            del self.session[CART_SESSION_ID]
-
+        self.cart.clear()
         self.save()
 

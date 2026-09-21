@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}Мои заказы — Hop & Barley{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h1>Мои заказы</h1>
+
+    <form method="get">
+
+        <label for="status">
+            Фильтр по статусу:
+        </label>
+
+        <select name="status" id="status">
+
+            <option value="">
+                Все заказы
+            </option>
+
+            {% for value, label in status_choices %}
+                <option
+                    value="{{ value }}"
+                    {% if selected_status == value %}selected{% endif %}
+                >
+                    {{ label }}
+                </option>
+            {% endfor %}
+
+        </select>
+
+        <button type="submit">
+            Фильтровать
+        </button>
+
+    </form>
+
+    <hr>
+
+    {% if orders %}
+
+        {% for order in orders %}
+
+            <div class="order">
+
+                <h2>
+                    Заказ №{{ order.id }}
+                </h2>
+
+                <p>
+                    <strong>Дата:</strong>
+                    {{ order.created_at|date:"d.m.Y H:i" }}
+                </p>
+
+                <p>
+                    <strong>Статус:</strong>
+                    {{ order.get_status_display }}
+                </p>
+
+                <p>
+                    <strong>Сумма:</strong>
+                    {{ order.total_price }}
+                </p>
+
+                {% if order.shipping_address %}
+                    <p>
+                        <strong>Адрес доставки:</strong><br>
+                        {{ order.shipping_address|linebreaksbr }}
+                    </p>
+                {% endif %}
+
+                <h3>Товары:</h3>
+
+                <ul>
+                    {% for item in order.items.all %}
+                        <li>
+                            {{ item.product.name }}
+                            — {{ item.quantity }} шт.
+                            × {{ item.price }}
+                        </li>
+                    {% endfor %}
+                </ul>
+
+            </div>
+
+            <hr>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>
+            У вас пока нет заказов.
+        </p>
+
+    {% endif %}
+
+    <p>
+        <a href="{% url 'users:profile' %}">
+            ← Вернуться в личный кабинет
+        </a>
+    </p>
+
+</div>
+
+{% endblock %}
+

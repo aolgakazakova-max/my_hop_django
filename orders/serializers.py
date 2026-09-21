@@ -49,7 +49,7 @@ class OrderCreateSerializer(serializers.Serializer):
     def validate_items(self, data):
         if not data:
             raise serializers.ValidationError(
-                'Заказ должен содержать хотя бы один элемент'
+                'Заказ должен содержать хотя бы один элемент.'
             )
 
         return data
@@ -58,25 +58,48 @@ class OrderCreateSerializer(serializers.Serializer):
         user = self.context['request'].user
 
         with transaction.atomic():
-            order = Order.objects.create(
-                user=user,
-                status=Order.Status.PAID,
-                shipping_address=validated_data['shipping_address'],
-            )
-
             total = 0
 
-            for item in validated_data['items']:
-                product = Product.objects.get(
-                    id=item['product_id'],
-                )
+            products = []
 
+            for item in validated_data['items']:
+                product_id = item['product_id']
                 quantity = item['quantity']
+
+                try:
+                    product = Product.objects.get(
+                        id=product_id,
+                        is_active=True,
+                    )
+                except Product.DoesNotExist:
+                    raise serializers.ValidationError(
+                        f'Товар с id={product_id} не найден.'
+                    )
 
                 if product.stock < quantity:
                     raise serializers.ValidationError(
-                        f'Не хватает {product.name} на складе'
+                        f'Не хватает "{product.name}" на складе.'
                     )
+
+                total += product.price * quantity
+
+                products.append(
+                    {
+                        'product': product,
+                        'quantity': quantity,
+                    }
+                )
+
+            order = Order.objects.create(
+                user=user,
+                status=Order.Status.PAID,
+                total_price=total,
+                shipping_address=validated_data['shipping_address'],
+            )
+
+            for item in products:
+                product = item['product']
+                quantity = item['quantity']
 
                 product.stock -= quantity
                 product.save(
@@ -89,13 +112,6 @@ class OrderCreateSerializer(serializers.Serializer):
                     quantity=quantity,
                     price=product.price,
                 )
-
-                total += product.price * quantity
-
-            order.total_price = total
-            order.save(
-                update_fields=['total_price'],
-            )
 
             return order
 
@@ -132,7 +148,9 @@ class CartAddSerializer(serializers.Serializer):
 
 class CartUpdateSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
-    quantity = serializers.IntegerField(min_value=1)
+    quantity = serializers.IntegerField(
+        min_value=1,
+    )
 
 
 class CartDeleteSerializer(serializers.Serializer):

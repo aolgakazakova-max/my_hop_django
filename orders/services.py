@@ -18,9 +18,20 @@ def create_order(user, cart, data: dict) -> Order:
     if total <= 0:
         raise ValueError('Нельзя создать заказ с нулевой суммой.')
 
+    payment_type = data.get(
+        'payment_type',
+        Order.PaymentType.DEBIT,
+    )
+
+    if payment_type == Order.PaymentType.COD:
+        status = Order.Status.PENDING
+    else:
+        status = Order.Status.PAID
+
     order = Order.objects.create(
         user=user,
-        status=Order.Status.PAID,
+        status=status,
+        payment_type=payment_type,
         total_price=total,
         shipping_address=(
             f'{data["full_name"]}, {data["phone_number"]}\n'
@@ -48,6 +59,8 @@ def create_order(user, cart, data: dict) -> Order:
             price=price,
         )
 
+    payment_display = order.get_payment_type_display()
+
     user_email = user.email
 
     if user_email:
@@ -56,7 +69,9 @@ def create_order(user, cart, data: dict) -> Order:
             message=(
                 f'Здравствуйте, {data["full_name"]}!\n\n'
                 f'Ваш заказ №{order.id} успешно оформлен.\n'
-                f'Сумма заказа: {order.total_price}.\n\n'
+                f'Сумма заказа: {order.total_price}.\n'
+                f'Способ оплаты: {payment_display}.\n'
+                f'Статус: {order.get_status_display()}.\n\n'
                 f'Адрес доставки:\n'
                 f'{order.shipping_address}\n\n'
                 f'Спасибо за покупку в Hop & Barley!'
@@ -79,6 +94,7 @@ def create_order(user, cart, data: dict) -> Order:
                 f'Город: {data["city"]}\n'
                 f'Адрес: {data["address"]}\n\n'
                 f'Сумма заказа: {order.total_price}.\n'
+                f'Способ оплаты: {payment_display}.\n'
                 f'Статус: {order.get_status_display()}.'
             ),
             from_email=settings.DEFAULT_FROM_EMAIL,
@@ -87,3 +103,4 @@ def create_order(user, cart, data: dict) -> Order:
         )
 
     return order
+

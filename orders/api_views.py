@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -11,7 +11,6 @@ from .cart import Cart
 from .models import Order
 from .serializers import (
     CartAddSerializer,
-    CartDeleteSerializer,
     CartSerializer,
     CartUpdateSerializer,
     OrderCreateSerializer,
@@ -204,18 +203,21 @@ class CartAPIView(APIView):
             'quantity': quantity,
         })
 
+
+class CartDeleteAPIView(APIView):
+
     @extend_schema(
-        request=CartDeleteSerializer,
+        parameters=[
+            OpenApiParameter(
+                name='product_id',
+                type=int,
+                location=OpenApiParameter.PATH,
+                description='ID товара, который нужно удалить из корзины',
+            ),
+        ],
+        responses={200: dict},
     )
-    def delete(self, request):
-        product_id = request.data.get('product_id')
-
-        if not product_id:
-            return Response(
-                {'detail': 'product_id is required'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
+    def delete(self, request, product_id):
         product = get_object_or_404(
             Product,
             id=product_id,

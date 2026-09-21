@@ -12,10 +12,11 @@ from rest_framework_simplejwt.views import (
 )
 
 from config.settings.development import DEBUG
-from orders.api_views import CartAPIView
+from orders.api_views import CartAPIView, CartDeleteAPIView
 from users.api_views import RegisterApiView
 
 from .api_urls import router
+
 
 urlpatterns: list[URLPattern | URLResolver] = [
     path('admin/', admin.site.urls),
@@ -24,7 +25,10 @@ urlpatterns: list[URLPattern | URLResolver] = [
     path('orders/', include('orders.urls')),
     path('reviews/', include('reviews.urls')),
     path('users/', include('users.urls')),
+    path('account/', include('users.account_urls')),
 ]
+
+
 
 
 api_patterns: list[URLPattern | URLResolver] = [
@@ -67,6 +71,12 @@ api_patterns: list[URLPattern | URLResolver] = [
         CartAPIView.as_view(),
         name='cart-api',
     ),
+
+    path(
+        'cart/<int:product_id>/',
+        CartDeleteAPIView.as_view(),
+        name='cart-delete-api',
+    ),
 ]
 
 
@@ -80,3 +90,4 @@ if DEBUG:
         settings.MEDIA_URL,
         document_root=settings.MEDIA_ROOT,
     )
+

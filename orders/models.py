@@ -3,7 +3,6 @@ from django.db import models
 
 from products.models import Product
 
-# Create your models here.
 
 class Order(models.Model):
     class Status(models.TextChoices):
@@ -13,14 +12,39 @@ class Order(models.Model):
         DELIVERED = 'delivered', 'Delivered'
         CANCELED = 'canceled', 'Canceled'
 
+    class PaymentType(models.TextChoices):
+        DEBIT = 'debit', 'Debit card'
+        WALLET = 'wallet', 'Wallet card'
+        COD = 'cod', 'Cash on delivery'
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='orders',
     )
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
-    total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    shipping_address = models.TextField(blank=True, null=True)
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+    )
+
+    payment_type = models.CharField(
+        max_length=20,
+        choices=PaymentType.choices,
+        default=PaymentType.COD,
+    )
+
+    total_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+    )
+
+    shipping_address = models.TextField(
+        blank=True,
+        null=True,
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -45,6 +69,7 @@ class OrderItem(models.Model):
     )
 
     quantity = models.PositiveIntegerField(default=1)
+
     price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -52,3 +77,4 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f'{self.product.name} {self.quantity} {self.price}'
+
