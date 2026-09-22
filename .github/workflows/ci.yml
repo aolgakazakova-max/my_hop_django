@@ -14,6 +14,7 @@ jobs:
 
     env:
       DJANGO_SECRET_KEY: "django-insecure-ci-test-key"
+      ADMIN_EMAIL: "admin@example.com"
 
     steps:
       - name: Checkout repository
@@ -41,5 +42,4 @@ jobs:
       - name: Run tests
         run: |
           python manage.py test
-
 
