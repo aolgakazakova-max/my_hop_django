@@ -513,7 +513,7 @@ class CheckoutViewTests(TestCase):
 
         self.assertIn(
             '/users/login/',
-            response.url,
+            response.headers['Location'],
         )
 
     def test_checkout_with_empty_cart_redirects_to_cart(self):

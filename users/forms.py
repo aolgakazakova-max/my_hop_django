@@ -56,6 +56,9 @@ class RegisterForm(forms.Form):
     def clean(self):
         cleaned_data = super().clean()
 
+        if cleaned_data is None:
+            cleaned_data = {}
+
         email = cleaned_data.get('email')
         password = cleaned_data.get('password')
         password_confirm = cleaned_data.get(
@@ -169,4 +172,3 @@ class UserPasswordChangeForm(PasswordChangeForm):
             }
         ),
     )
-
