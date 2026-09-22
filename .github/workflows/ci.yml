@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      SECRET_KEY: "django-insecure-ci-test-key"
+      DJANGO_SECRET_KEY: "django-insecure-ci-test-key"
 
     steps:
       - name: Checkout repository
@@ -41,4 +41,5 @@ jobs:
       - name: Run tests
         run: |
           python manage.py test
+
 
