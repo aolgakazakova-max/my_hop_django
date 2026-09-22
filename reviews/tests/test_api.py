@@ -1,14 +1,11 @@
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 from django.test import TestCase
-from django.urls import reverse
 
 from orders.models import Order, OrderItem
 from products.models import Category, Product
 
-from ..forms import ReviewForm
 from ..models import Review
 
 User = get_user_model()

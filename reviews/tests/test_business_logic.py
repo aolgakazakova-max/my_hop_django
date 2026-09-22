@@ -5,7 +5,6 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 
-from orders.models import Order, OrderItem
 from products.models import Category, Product
 
 from ..forms import ReviewForm

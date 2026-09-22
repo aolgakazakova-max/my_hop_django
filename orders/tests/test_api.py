@@ -9,7 +9,6 @@ from products.models import Category, Product
 
 from ..models import Order, OrderItem
 
-
 User = get_user_model()
 
 

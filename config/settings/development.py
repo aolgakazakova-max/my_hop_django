@@ -1,6 +1,5 @@
 from .base import *  # noqa: F403
 
-
 ALLOWED_HOSTS = ['*']
 DEBUG = True
 
@@ -14,7 +13,7 @@ DATABASES = {
 
 
 REST_FRAMEWORK = {
-    **REST_FRAMEWORK,
+    **REST_FRAMEWORK,  # noqa: F405
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 

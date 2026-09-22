@@ -17,7 +17,6 @@ from users.api_views import RegisterApiView
 
 from .api_urls import router
 
-
 urlpatterns: list[URLPattern | URLResolver] = [
     path('admin/', admin.site.urls),
 

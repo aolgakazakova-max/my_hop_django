@@ -7,7 +7,6 @@ from orders.models import Order
 from payments.models import Payment
 from payments.services import process_payment
 
-
 User = get_user_model()
 
 
