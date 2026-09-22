@@ -1,36 +1,52 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
 
-from .models import Order, OrderItem
+from payments.services import process_payment
+
+from .models import Order
 
 
 class OutOfStock(Exception):
-    """Возникает, если товара недостаточно на складе."""
+    """Raised when there is not enough product stock to create an order."""
 
 
 @transaction.atomic
-def create_order(user, cart, data: dict) -> Order:
-    """Создаёт заказ, уменьшает остатки и отправляет email."""
+def create_order(user, cart, data):
+    """
+    Create an order from the current cart.
 
-    total = cart.get_total_price()
+    The function checks product stock, creates the order and its items,
+    processes the mock payment, decreases stock and sends notification
+    emails to the customer and administrator.
+    """
 
-    if total <= 0:
-        raise ValueError('Нельзя создать заказ с нулевой суммой.')
+    total = Decimal('0.00')
+
+    for item in cart:
+        product = item['product']
+        quantity = item['quantity']
+
+        if quantity > product.stock:
+            raise OutOfStock(
+                f'Not enough stock for {product.name}.'
+            )
+
+        total += product.price * quantity
+
+    if total <= Decimal('0.00'):
+        raise ValueError('Order total must be greater than zero.')
 
     payment_type = data.get(
         'payment_type',
         Order.PaymentType.DEBIT,
     )
 
-    if payment_type == Order.PaymentType.COD:
-        status = Order.Status.PENDING
-    else:
-        status = Order.Status.PAID
-
     order = Order.objects.create(
         user=user,
-        status=status,
+        status=Order.Status.PENDING,
         payment_type=payment_type,
         total_price=total,
         shipping_address=(
@@ -42,65 +58,45 @@ def create_order(user, cart, data: dict) -> Order:
     for item in cart:
         product = item['product']
         quantity = item['quantity']
-        price = product.price
-
-        if product.stock < quantity:
-            raise OutOfStock(
-                f'Не хватает товара "{product.name}" на складе.'
-            )
 
         product.stock -= quantity
         product.save(update_fields=['stock'])
 
-        OrderItem.objects.create(
-            order=order,
+        order.items.create(
             product=product,
             quantity=quantity,
-            price=price,
+            price=product.price,
         )
 
-    payment_display = order.get_payment_type_display()
+    payment = process_payment(order)
 
-    user_email = user.email
+    subject = f'Order #{order.pk} confirmation'
 
-    if user_email:
-        send_mail(
-            subject=f'Заказ #{order.id} успешно оформлен',
-            message=(
-                f'Здравствуйте, {data["full_name"]}!\n\n'
-                f'Ваш заказ №{order.id} успешно оформлен.\n'
-                f'Сумма заказа: {order.total_price}.\n'
-                f'Способ оплаты: {payment_display}.\n'
-                f'Статус: {order.get_status_display()}.\n\n'
-                f'Адрес доставки:\n'
-                f'{order.shipping_address}\n\n'
-                f'Спасибо за покупку в Hop & Barley!'
-            ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user_email],
-            fail_silently=False,
-        )
+    message = (
+        f'Order #{order.pk}\n'
+        f'Total: {order.total_price}\n'
+        f'Payment status: {payment.status}\n'
+        f'Payment type: {order.get_payment_type_display()}\n'
+        f'Shipping address:\n{order.shipping_address}'
+    )
+
+    send_mail(
+        subject=subject,
+        message=message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
 
     admin_email = getattr(settings, 'ADMIN_EMAIL', None)
 
     if admin_email:
         send_mail(
-            subject=f'Новый заказ #{order.id}',
-            message=(
-                f'Поступил новый заказ №{order.id}.\n\n'
-                f'Покупатель: {data["full_name"]}\n'
-                f'Email: {user.email}\n'
-                f'Телефон: {data["phone_number"]}\n'
-                f'Город: {data["city"]}\n'
-                f'Адрес: {data["address"]}\n\n'
-                f'Сумма заказа: {order.total_price}.\n'
-                f'Способ оплаты: {payment_display}.\n'
-                f'Статус: {order.get_status_display()}.'
-            ),
+            subject=subject,
+            message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[admin_email],
             fail_silently=False,
         )
 
     return order
-

@@ -7,9 +7,10 @@ from django.urls import reverse
 
 from products.models import Category, Product
 
-from .cart import Cart
-from .models import Order, OrderItem
-from .services import OutOfStock, create_order
+from ..cart import Cart
+from ..models import Order, OrderItem
+from ..services import OutOfStock, create_order
+
 
 User = get_user_model()
 
@@ -42,13 +43,10 @@ class CartTests(TestCase):
         )
 
     def get_cart(self):
-        """Возвращает корзину для текущего тестового запроса."""
         request = self.client.get('/').wsgi_request
         return Cart(request)
 
     def test_empty_cart(self):
-        """Новая корзина должна быть пустой."""
-
         cart = self.get_cart()
 
         self.assertEqual(len(cart), 0)
@@ -58,8 +56,6 @@ class CartTests(TestCase):
         )
 
     def test_add_product_to_cart(self):
-        """Товар можно добавить в корзину."""
-
         cart = self.get_cart()
 
         cart.add(self.product)
@@ -71,8 +67,6 @@ class CartTests(TestCase):
         )
 
     def test_add_product_increases_quantity(self):
-        """Повторное добавление увеличивает количество."""
-
         cart = self.get_cart()
 
         cart.add(self.product)
@@ -84,8 +78,6 @@ class CartTests(TestCase):
         )
 
     def test_override_quantity(self):
-        """override=True заменяет количество товара."""
-
         cart = self.get_cart()
 
         cart.add(self.product, quantity=5)
@@ -101,8 +93,6 @@ class CartTests(TestCase):
         )
 
     def test_cart_length_counts_different_products(self):
-        """len(cart) возвращает количество разных товаров."""
-
         cart = self.get_cart()
 
         cart.add(self.product, quantity=3)
@@ -111,8 +101,6 @@ class CartTests(TestCase):
         self.assertEqual(len(cart), 2)
 
     def test_cart_total_price(self):
-        """Корзина правильно считает общую стоимость."""
-
         cart = self.get_cart()
 
         cart.add(self.product, quantity=2)
@@ -129,8 +117,6 @@ class CartTests(TestCase):
         )
 
     def test_cart_iteration_returns_product_and_total(self):
-        """Итерация по корзине возвращает товар и его стоимость."""
-
         cart = self.get_cart()
 
         cart.add(self.product, quantity=2)
@@ -156,8 +142,6 @@ class CartTests(TestCase):
         )
 
     def test_remove_product_from_cart(self):
-        """Товар можно удалить из корзины."""
-
         cart = self.get_cart()
 
         cart.add(self.product)
@@ -170,8 +154,6 @@ class CartTests(TestCase):
         )
 
     def test_remove_missing_product_does_nothing(self):
-        """Удаление отсутствующего товара не вызывает ошибку."""
-
         cart = self.get_cart()
 
         cart.remove(self.product)
@@ -179,8 +161,6 @@ class CartTests(TestCase):
         self.assertEqual(len(cart), 0)
 
     def test_clear_cart(self):
-        """clear() полностью очищает корзину."""
-
         cart = self.get_cart()
 
         cart.add(self.product)
@@ -195,8 +175,6 @@ class CartTests(TestCase):
         )
 
     def test_quantity_less_than_one_is_not_added(self):
-        """Количество меньше 1 не должно добавлять товар."""
-
         cart = self.get_cart()
 
         cart.add(self.product, quantity=0)
@@ -247,14 +225,11 @@ class OrderServiceTests(TestCase):
         }
 
     def get_cart(self):
-        """Возвращает корзину для тестового пользователя."""
         request = self.client.get('/').wsgi_request
         return Cart(request)
 
     @patch('orders.services.send_mail')
     def test_create_order(self, mock_send_mail):
-        """create_order создаёт оплаченный заказ с правильными данными."""
-
         cart = self.get_cart()
         cart.add(self.product, quantity=2)
 
@@ -304,8 +279,6 @@ class OrderServiceTests(TestCase):
         self,
         mock_send_mail,
     ):
-        """При оплате при получении заказ остаётся pending."""
-
         cart = self.get_cart()
         cart.add(self.product)
 
@@ -337,8 +310,6 @@ class OrderServiceTests(TestCase):
 
     @patch('orders.services.send_mail')
     def test_order_item_is_created(self, mock_send_mail):
-        """Для заказа создаётся OrderItem."""
-
         cart = self.get_cart()
         cart.add(self.product, quantity=3)
 
@@ -367,8 +338,6 @@ class OrderServiceTests(TestCase):
 
     @patch('orders.services.send_mail')
     def test_product_stock_is_decreased(self, mock_send_mail):
-        """После заказа количество товара на складе уменьшается."""
-
         cart = self.get_cart()
         cart.add(self.product, quantity=4)
 
@@ -390,8 +359,6 @@ class OrderServiceTests(TestCase):
         self,
         mock_send_mail,
     ):
-        """Общая сумма заказа правильно считается."""
-
         cart = self.get_cart()
 
         cart.add(self.product, quantity=2)
@@ -418,8 +385,6 @@ class OrderServiceTests(TestCase):
         self,
         mock_send_mail,
     ):
-        """При наличии email покупателю отправляется письмо."""
-
         cart = self.get_cart()
         cart.add(self.product)
 
@@ -444,8 +409,6 @@ class OrderServiceTests(TestCase):
         )
 
     def test_create_order_with_insufficient_stock(self):
-        """Нельзя создать заказ, если товара недостаточно."""
-
         cart = self.get_cart()
         cart.add(self.product, quantity=11)
 
@@ -469,8 +432,6 @@ class OrderServiceTests(TestCase):
         )
 
     def test_create_order_with_zero_total(self):
-        """Нельзя создать заказ с нулевой суммой."""
-
         cart = self.get_cart()
 
         with self.assertRaises(ValueError):
@@ -524,8 +485,6 @@ class CheckoutViewTests(TestCase):
         }
 
     def add_product_to_cart(self, quantity=1):
-        """Добавляет товар в корзину через настоящий POST-запрос."""
-
         response = self.client.post(
             reverse(
                 'orders:cart_add',
@@ -544,8 +503,6 @@ class CheckoutViewTests(TestCase):
         )
 
     def test_checkout_requires_login(self):
-        """Неавторизованный пользователь перенаправляется на login."""
-
         response = self.client.get(
             reverse('orders:checkout')
         )
@@ -557,12 +514,10 @@ class CheckoutViewTests(TestCase):
 
         self.assertIn(
             '/users/login/',
-            response.url,  # type: ignore[attr-defined]
+            response.url,
         )
 
     def test_checkout_with_empty_cart_redirects_to_cart(self):
-        """Checkout с пустой корзиной возвращает пользователя в корзину."""
-
         self.client.login(
             username='checkoutuser',
             password='checkoutpassword123',
@@ -583,8 +538,6 @@ class CheckoutViewTests(TestCase):
         )
 
     def test_checkout_get_with_products(self):
-        """GET checkout с товаром показывает страницу оформления."""
-
         self.client.login(
             username='checkoutuser',
             password='checkoutpassword123',
@@ -616,8 +569,6 @@ class CheckoutViewTests(TestCase):
         self,
         mock_send_mail,
     ):
-        """POST checkout с оплатой картой создаёт оплаченный заказ."""
-
         self.client.login(
             username='checkoutuser',
             password='checkoutpassword123',
@@ -692,8 +643,6 @@ class CheckoutViewTests(TestCase):
         self,
         mock_send_mail,
     ):
-        """Checkout с оплатой при получении создаёт pending-заказ."""
-
         self.client.login(
             username='checkoutuser',
             password='checkoutpassword123',
@@ -743,8 +692,6 @@ class CheckoutViewTests(TestCase):
         self,
         mock_send_mail,
     ):
-        """Пользователь не может открыть чужой заказ."""
-
         self.client.login(
             username='checkoutuser',
             password='checkoutpassword123',
@@ -781,8 +728,6 @@ class CheckoutViewTests(TestCase):
         )
 
     def test_cart_add_cannot_exceed_stock(self):
-        """Нельзя добавить больше товара, чем есть на складе."""
-
         self.client.login(
             username='checkoutuser',
             password='checkoutpassword123',
@@ -819,8 +764,6 @@ class CheckoutViewTests(TestCase):
         )
 
     def test_cart_add_requires_post(self):
-        """Добавление товара доступно только через POST."""
-
         response = self.client.get(
             reverse(
                 'orders:cart_add',
@@ -836,8 +779,6 @@ class CheckoutViewTests(TestCase):
         )
 
     def test_cart_update_cannot_exceed_stock(self):
-        """Нельзя установить количество больше остатка."""
-
         self.client.login(
             username='checkoutuser',
             password='checkoutpassword123',
@@ -869,4 +810,3 @@ class CheckoutViewTests(TestCase):
             cart.cart[str(self.product.id)]['quantity'],
             2,
         )
-
