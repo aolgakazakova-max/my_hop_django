@@ -12,9 +12,30 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: hop_django_luxe
+          POSTGRES_USER: hop_user
+          POSTGRES_PASSWORD: hop_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hop_user -d hop_django_luxe"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       DJANGO_SECRET_KEY: "django-insecure-ci-test-key"
       ADMIN_EMAIL: "admin@example.com"
+      POSTGRES_DB: "hop_django_luxe"
+      POSTGRES_USER: "hop_user"
+      POSTGRES_PASSWORD: "hop_password"
+      POSTGRES_HOST: "localhost"
+      POSTGRES_PORT: "5432"
+      DJANGO_SETTINGS_MODULE: "config.settings.ci"
 
     steps:
       - name: Checkout repository
@@ -42,4 +63,3 @@ jobs:
       - name: Run tests
         run: |
           python manage.py test
-
