@@ -38,6 +38,21 @@ class Cart:
 
         self.save()
 
+    def update(self, product, quantity):
+        """Обновляет количество товара в корзине."""
+
+        product_id = str(product.id)
+
+        if quantity < 1:
+            self.remove(product)
+            return
+
+        if product_id not in self.cart:
+            return
+
+        self.cart[product_id]['quantity'] = quantity
+        self.save()
+
     def remove(self, product):
         """Удаляет товар из корзины."""
 
@@ -49,6 +64,7 @@ class Cart:
 
     def save(self):
         """Сообщает Django, что сессию нужно сохранить."""
+
         self.session.modified = True
 
     def __iter__(self):
@@ -56,7 +72,10 @@ class Cart:
 
         products = Product.objects.filter(id__in=self.cart.keys())
 
-        cart = self.cart.copy()
+        cart = {
+            product_id: item.copy()
+            for product_id, item in self.cart.items()
+        }
 
         for product in products:
             cart[str(product.id)]['product'] = product
@@ -69,6 +88,7 @@ class Cart:
 
     def __len__(self):
         """Количество разных товаров в корзине."""
+
         return len(self.cart)
 
     def get_total_price(self):
@@ -87,4 +107,3 @@ class Cart:
 
         self.cart.clear()
         self.save()
-

@@ -4,6 +4,8 @@
 
 Проект разработан на Django и Django REST Framework и включает веб-интерфейс магазина, корзину на сессиях, оформление заказов, личный кабинет пользователя, отзывы, mock-платежи, REST API, JWT-аутентификацию, PostgreSQL, Docker Compose, автоматические тесты и CI через GitHub Actions.
 
+Дополнительно в ветке `graphql` реализован GraphQL API на Strawberry.
+
 ---
 
 ## Содержание
@@ -26,6 +28,7 @@
 * [REST API](#rest-api)
 * [JWT-аутентификация](#jwt-аутентификация)
 * [OpenAPI и Swagger](#openapi-и-swagger)
+* [GraphQL](#graphql)
 * [Тестирование](#тестирование)
 * [Проверка качества кода](#проверка-качества-кода)
 * [CI GitHub Actions](#ci-github-actions)
@@ -63,17 +66,36 @@
 * выход из аккаунта;
 * отзывы о товарах.
 
+### GraphQL
+
+В ветке `graphql` реализован GraphQL API, работающий поверх существующей бизнес-логики проекта.
+
+GraphQL предоставляет:
+
+* получение категорий;
+* получение активных товаров;
+* получение отзывов;
+* получение профиля текущего пользователя;
+* получение заказов текущего пользователя;
+* получение session-корзины;
+* добавление товара в корзину;
+* изменение количества товара в корзине;
+* удаление товара из корзины;
+* создание заказа.
+
 ---
 
 ## Технологии
 
 Основные технологии проекта:
 
-* Python 3.12;
+* Python 3.12+;
 * Django 6.1.1;
 * Django REST Framework;
 * Simple JWT;
 * drf-spectacular;
+* Strawberry GraphQL;
+* strawberry-graphql-django;
 * SQLite для локальной разработки;
 * PostgreSQL;
 * Docker;
@@ -136,6 +158,11 @@ hop_django/
 │   ├── services.py
 │   ├── admin.py
 │   └── tests/
+│
+├── graphql_api/
+│   ├── __init__.py
+│   ├── schema.py
+│   └── tests.py
 │
 ├── templates/
 │   ├── base.html
@@ -268,6 +295,14 @@ http://127.0.0.1:8000/
 http://127.0.0.1:8000/admin/
 ```
 
+GraphQL в ветке `graphql`:
+
+```text
+http://127.0.0.1:8000/graphql/
+```
+
+На странице GraphQL доступен интерактивный GraphiQL.
+
 ---
 
 ## PostgreSQL и Docker
@@ -377,6 +412,8 @@ http://127.0.0.1:8000/admin/
 
 Пользователь не может добавить в корзину больше товара, чем доступно на складе.
 
+В ветке `graphql` та же session-корзина доступна через GraphQL API.
+
 ---
 
 ## Оформление заказа
@@ -406,6 +443,8 @@ http://127.0.0.1:8000/admin/
 11. Корзина очищается.
 
 Создание заказа выполняется внутри транзакции базы данных.
+
+В ветке `graphql` mutation `createOrder` использует существующий сервис `orders.services.create_order()`, поэтому бизнес-логика оформления заказа не дублируется.
 
 ---
 
@@ -457,6 +496,8 @@ failed
 * город;
 * адрес.
 
+В ветке `graphql` профиль текущего авторизованного пользователя доступен через GraphQL query `profile`.
+
 ---
 
 ## Отзывы
@@ -479,6 +520,8 @@ failed
 * удалить свой отзыв.
 
 Отзывы других пользователей нельзя редактировать или удалять.
+
+В ветке `graphql` отзывы доступны через query `reviews`.
 
 ---
 
@@ -531,6 +574,245 @@ Swagger позволяет просматривать доступные API end
 
 ---
 
+## GraphQL
+
+GraphQL реализован в отдельном приложении `graphql_api` с использованием Strawberry.
+
+GraphQL endpoint:
+
+```text
+http://127.0.0.1:8000/graphql/
+```
+
+Интерактивный GraphiQL доступен по тому же адресу.
+
+### Queries
+
+Поддерживаются следующие queries:
+
+```text
+categories
+products
+reviews
+profile
+orders
+cart
+```
+
+### Mutations
+
+Поддерживаются следующие mutations:
+
+```text
+addToCart
+updateCart
+removeFromCart
+createOrder
+```
+
+### Получение товаров
+
+Пример запроса:
+
+```graphql
+query {
+  products {
+    id
+    name
+    price
+    stock
+  }
+}
+```
+
+### Получение профиля
+
+Для авторизованного пользователя:
+
+```graphql
+query {
+  profile {
+    id
+    fullName
+    phone
+    city
+    address
+  }
+}
+```
+
+### Получение заказов
+
+```graphql
+query {
+  orders {
+    id
+    status
+    paymentType
+    totalPrice
+    shippingAddress
+    createdAt
+    items {
+      id
+      quantity
+      price
+      product {
+        id
+        name
+      }
+    }
+  }
+}
+```
+
+Пользователь получает только свои заказы.
+
+### Получение корзины
+
+```graphql
+query {
+  cart {
+    totalPrice
+    items {
+      quantity
+      totalPrice
+      product {
+        id
+        name
+        price
+      }
+    }
+  }
+}
+```
+
+Корзина использует ту же Django session, что и обычный веб-интерфейс.
+
+### Добавление товара в корзину
+
+```graphql
+mutation {
+  addToCart(productId: 1, quantity: 2) {
+    totalPrice
+    items {
+      quantity
+      totalPrice
+      product {
+        id
+        name
+        price
+      }
+    }
+  }
+}
+```
+
+### Изменение количества товара
+
+```graphql
+mutation {
+  updateCart(productId: 1, quantity: 3) {
+    totalPrice
+    items {
+      quantity
+      totalPrice
+      product {
+        id
+        name
+        price
+      }
+    }
+  }
+}
+```
+
+### Удаление товара из корзины
+
+```graphql
+mutation {
+  removeFromCart(productId: 1) {
+    totalPrice
+    items {
+      quantity
+      totalPrice
+      product {
+        id
+        name
+        price
+      }
+    }
+  }
+}
+```
+
+### Создание заказа
+
+Создание заказа доступно авторизованному пользователю.
+
+```graphql
+mutation {
+  createOrder(
+    input: {
+      fullName: "Test User"
+      phoneNumber: "0000000000"
+      city: "Test City"
+      address: "Test Address"
+      paymentType: "debit"
+    }
+  ) {
+    id
+    status
+    paymentType
+    totalPrice
+    shippingAddress
+    items {
+      id
+      quantity
+      price
+      product {
+        id
+        name
+      }
+    }
+  }
+}
+```
+
+Mutation `createOrder` использует существующий сервис оформления заказа и после успешного создания заказа очищает session-корзину.
+
+### Типы GraphQL
+
+В проекте определены GraphQL-типы для:
+
+```text
+CategoryType
+ProductType
+ProfileType
+ReviewType
+OrderItemType
+OrderType
+CartItemType
+CartType
+```
+
+Для оформления заказа используется:
+
+```text
+CreateOrderInput
+```
+
+### Аутентификация
+
+GraphQL использует Django session пользователя.
+
+Поэтому авторизованный пользователь GraphQL получает доступ к своему:
+
+* профилю;
+* заказам;
+* session-корзине.
+
+---
+
 ## Тестирование
 
 Для проекта реализованы автоматические тесты Django.
@@ -552,14 +834,39 @@ python manage.py test
 * платежи;
 * REST API;
 * аутентификация;
-* работа сервисов.
+* работа сервисов;
+* GraphQL API.
 
-Текущая тестовая коллекция содержит **131 тест**.
+Для GraphQL создан отдельный файл:
+
+```text
+graphql_api/tests.py
+```
+
+Запуск только GraphQL-тестов:
+
+```powershell
+python manage.py test graphql_api
+```
+
+Текущая тестовая коллекция ветки `graphql` содержит:
+
+```text
+141 test(s)
+```
 
 Последний полный локальный запуск:
 
 ```text
-Ran 131 tests
+Ran 141 tests in 133.541s
+
+OK
+```
+
+GraphQL отдельно:
+
+```text
+Ran 10 tests
 
 OK
 ```
@@ -602,10 +909,10 @@ ruff check . --fix
 mypy .
 ```
 
-Текущий проект проходит проверку:
+Текущая ветка `graphql` проходит проверку:
 
 ```text
-Success: no issues found in 70 source files
+Success: no issues found in 73 source files
 ```
 
 ---
@@ -619,6 +926,12 @@ python manage.py check
 ```
 
 Команда должна завершиться без ошибок.
+
+Текущий проект проходит проверку:
+
+```text
+System check identified no issues (0 silenced).
+```
 
 ---
 
@@ -655,6 +968,8 @@ config/settings/ci.py
 
 CI работает с PostgreSQL.
 
+GraphQL разрабатывается в отдельной ветке `graphql` и не входит в стабильную ветку `main`, пока изменения не будут объединены.
+
 ---
 
 ## Полезные команды
@@ -689,10 +1004,16 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-### Запуск тестов
+### Запуск всех тестов
 
 ```powershell
 python manage.py test
+```
+
+### Запуск GraphQL-тестов
+
+```powershell
+python manage.py test graphql_api
 ```
 
 ### Ruff
@@ -763,7 +1084,9 @@ __pycache__/
 
 ## Статус проекта
 
-Основная версия проекта `main` содержит:
+### Ветка `main`
+
+Основная версия проекта содержит:
 
 * Django интернет-магазин;
 * каталог товаров;
@@ -791,15 +1114,33 @@ __pycache__/
 * mypy;
 * GitHub Actions CI.
 
-GraphQL в основную версию проекта не входит.
+### Ветка `graphql`
 
-GraphQL планируется разрабатывать отдельно в ветке `graphql`.
+В ветке `graphql` дополнительно реализован:
+
+* GraphQL API;
+* Strawberry;
+* Strawberry Django integration;
+* GraphQL queries для каталога, отзывов, профиля, заказов и корзины;
+* GraphQL mutations для работы с корзиной;
+* GraphQL mutation для создания заказа;
+* 10 автоматических GraphQL-тестов.
+
+На текущем этапе ветка `graphql` проходит:
+
+```text
+Django check   ✅
+Ruff           ✅
+mypy           ✅
+GraphQL tests  ✅ 10/10
+Full tests     ✅ 141/141
+```
 
 ---
 
 ## Назначение проекта
 
-Проект создан в учебных целях для демонстрации разработки интернет-магазина на Django и Django REST Framework, включая веб-интерфейс, REST API, работу с базой данных, авторизацию, тестирование и автоматическую проверку качества кода.
+Проект создан в учебных целях для демонстрации разработки интернет-магазина на Django и Django REST Framework, включая веб-интерфейс, REST API, GraphQL API, работу с базой данных, авторизацию, тестирование и автоматическую проверку качества кода.
 
 ---
 
