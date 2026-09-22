@@ -29,7 +29,7 @@ class OrderAPITests(APITestCase):
         )
 
         self.category = Category.objects.create(
-            name='API хмель',
+            name='API СЃРѕР»РѕРґ',
             slug='api-hops',
         )
 
@@ -63,7 +63,7 @@ class OrderAPITests(APITestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_403_FORBIDDEN,
+            status.HTTP_401_UNAUTHORIZED,
         )
 
     def test_order_list_returns_only_current_user_orders(self):
@@ -90,7 +90,7 @@ class OrderAPITests(APITestCase):
 
         returned_ids = [
             item['id']
-            for item in response.data
+            for item in response.data['results']
         ]
 
         self.assertIn(
@@ -237,7 +237,7 @@ class OrderAPITests(APITestCase):
 
         self.assertEqual(
             response.status_code,
-            status.HTTP_403_FORBIDDEN,
+            status.HTTP_401_UNAUTHORIZED,
         )
 
     def test_create_order_requires_items(self):
