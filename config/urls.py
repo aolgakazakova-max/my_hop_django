@@ -10,8 +10,10 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from strawberry.django.views import GraphQLView
 
 from config.settings.development import DEBUG
+from graphql_api.schema import schema
 from orders.api_views import CartAPIView, CartDeleteAPIView
 from users.api_views import RegisterApiView
 
@@ -20,14 +22,18 @@ from .api_urls import router
 urlpatterns: list[URLPattern | URLResolver] = [
     path('admin/', admin.site.urls),
 
+    path(
+        'graphql/',
+        GraphQLView.as_view(schema=schema),
+        name='graphql',
+    ),
+
     path('', include('products.urls')),
     path('orders/', include('orders.urls')),
     path('reviews/', include('reviews.urls')),
     path('users/', include('users.urls')),
     path('account/', include('users.account_urls')),
 ]
-
-
 
 
 api_patterns: list[URLPattern | URLResolver] = [
@@ -89,4 +95,3 @@ if DEBUG:
         settings.MEDIA_URL,
         document_root=settings.MEDIA_ROOT,
     )
-
