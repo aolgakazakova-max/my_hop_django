@@ -28,7 +28,7 @@ class OrderAPITests(APITestCase):
         )
 
         self.category = Category.objects.create(
-            name='API СЃРѕР»РѕРґ',
+            name='API солод',
             slug='api-hops',
         )
 
