@@ -27,7 +27,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     ]
 
     filterset_fields = ['category__name']
-    search_fields = ['title', 'description']
+    search_fields = ['name', 'description']
     ordering_fields = ['price', 'created_at', 'avg_rating']
 
     def get_queryset(self):
