@@ -1,10 +1,10 @@
 # Hop & Barley
 
-Интернет-магазин продукции из хмеля на Django.
+Интернет-магазин продукции из хмеля, разработанный на Django.
 
-Проект разработан на Django и Django REST Framework и включает веб-интерфейс магазина, корзину на сессиях, оформление заказов, личный кабинет пользователя, отзывы, mock-платежи, REST API, JWT-аутентификацию, PostgreSQL, Docker Compose, автоматические тесты и CI через GitHub Actions.
+Проект представляет собой полноценное веб-приложение интернет-магазина с каталогом товаров, корзиной на основе Django Session, оформлением заказов, личным кабинетом, отзывами, mock-платежами, REST API, JWT-аутентификацией и GraphQL API.
 
-Дополнительно в ветке `graphql` реализован GraphQL API на Strawberry.
+Проект также включает PostgreSQL, Docker Compose, автоматические тесты, статический анализ кода и CI/CD через GitHub Actions.
 
 ---
 
@@ -15,23 +15,22 @@
 * [Структура проекта](#структура-проекта)
 * [Требования](#требования)
 * [Установка](#установка)
-* [Настройка окружения](#настройка-окружения)
+* [Настройка переменных окружения](#настройка-переменных-окружения)
 * [Запуск проекта](#запуск-проекта)
-* [PostgreSQL и Docker](#postgresql-и-docker)
+* [Docker Compose](#docker-compose)
 * [Миграции](#миграции)
 * [Django Admin](#django-admin)
 * [Корзина](#корзина)
 * [Оформление заказа](#оформление-заказа)
-* [Платежи](#платежи)
-* [Пользователи и профиль](#пользователи-и-профиль)
+* [Пользователи и авторизация](#пользователи-и-авторизация)
 * [Отзывы](#отзывы)
 * [REST API](#rest-api)
 * [JWT-аутентификация](#jwt-аутентификация)
-* [OpenAPI и Swagger](#openapi-и-swagger)
-* [GraphQL](#graphql)
+* [Swagger / OpenAPI](#swagger--openapi)
+* [GraphQL API](#graphql-api)
 * [Тестирование](#тестирование)
-* [Проверка качества кода](#проверка-качества-кода)
-* [CI GitHub Actions](#ci-github-actions)
+* [Качество кода](#качество-кода)
+* [CI/CD](#cicd)
 * [Полезные команды](#полезные-команды)
 * [Безопасность](#безопасность)
 * [Статус проекта](#статус-проекта)
@@ -40,148 +39,152 @@
 
 ## Возможности проекта
 
-### Интернет-магазин
+### Каталог товаров
 
-Веб-часть приложения предоставляет:
-
-* каталог товаров;
+* просмотр списка товаров;
+* просмотр страницы отдельного товара;
 * категории товаров;
-* поиск товаров;
-* фильтрацию по категории;
-* фильтрацию по диапазону цен;
-* сортировку товаров;
-* страницу товара;
-* фотографии товаров;
-* отображение остатка товара;
-* проверку доступного количества товара;
-* корзину на основе Django sessions;
-* добавление товаров в корзину;
-* изменение количества товаров;
-* удаление товаров из корзины;
-* оформление заказа;
-* историю заказов;
-* личный кабинет;
-* регистрацию;
-* авторизацию;
-* выход из аккаунта;
-* отзывы о товарах.
+* поиск;
+* фильтрация по категории и цене;
+* сортировка;
+* отображение рейтинга товаров;
+* пагинация;
+* контроль наличия товара на складе.
 
-### GraphQL
+### Корзина
 
-В ветке `graphql` реализован GraphQL API, работающий поверх существующей бизнес-логики проекта.
-
-GraphQL предоставляет:
-
-* получение категорий;
-* получение активных товаров;
-* получение отзывов;
-* получение профиля текущего пользователя;
-* получение заказов текущего пользователя;
-* получение session-корзины;
 * добавление товара в корзину;
-* изменение количества товара в корзине;
-* удаление товара из корзины;
-* создание заказа.
+* изменение количества;
+* удаление товара;
+* очистка корзины;
+* проверка количества товара на складе;
+* автоматический пересчёт общей стоимости.
+
+Корзина реализована с использованием **Django Session** и не хранится в отдельной модели базы данных.
+
+### Заказы
+
+* оформление заказа;
+* создание `Order` и `OrderItem`;
+* проверка наличия товара;
+* уменьшение количества товара на складе;
+* расчёт стоимости заказа;
+* статусы заказа;
+* выбор способа оплаты;
+* отправка email пользователю и администратору;
+* очистка корзины после успешного оформления.
+
+### Пользователи
+
+* регистрация;
+* вход по email;
+* выход из аккаунта;
+* личный профиль;
+* редактирование профиля;
+* изменение пароля;
+* просмотр истории заказов.
+
+### Отзывы
+
+* оценка товара от 1 до 5;
+* текстовый комментарий;
+* один отзыв пользователя на один товар;
+* редактирование только собственного отзыва;
+* отображение среднего рейтинга товара.
+
+### Платежи
+
+В проекте используется **mock-платёжная система**.
+
+Реальные банковские платежи не выполняются.
+
+Поддерживаются:
+
+* оплата картой — mock debit payment;
+* оплата при получении — Cash on Delivery.
 
 ---
 
 ## Технологии
 
-Основные технологии проекта:
-
-* Python 3.12+;
-* Django 6.1.1;
-* Django REST Framework;
-* Simple JWT;
-* drf-spectacular;
-* Strawberry GraphQL;
-* strawberry-graphql-django;
-* SQLite для локальной разработки;
-* PostgreSQL;
-* Docker;
-* Docker Compose;
-* Ruff;
-* mypy;
-* Django Test Framework;
-* GitHub Actions.
+* **Python 3.13**
+* **Django 6.1**
+* **Django REST Framework**
+* **Simple JWT**
+* **drf-spectacular**
+* **Strawberry GraphQL**
+* **PostgreSQL 16**
+* **Docker**
+* **Docker Compose**
+* **Ruff**
+* **mypy**
+* **Django Test Framework**
+* **GitHub Actions**
+* **Git / GitHub**
 
 ---
 
 ## Структура проекта
 
+Основные приложения проекта:
+
 ```text
 hop_django/
 │
 ├── config/
-│   ├── settings/
-│   │   ├── base.py
-│   │   ├── development.py
-│   │   └── ci.py
-│   └── urls.py
+│   └── settings/
+│       ├── base.py
+│       ├── development.py
+│       ├── ci.py
+│       └── prod.py
 │
 ├── products/
 │   ├── models.py
 │   ├── views.py
-│   ├── forms.py
 │   ├── serializers.py
-│   ├── api_views.py
-│   └── tests/
+│   └── ...
 │
 ├── orders/
 │   ├── models.py
-│   ├── views.py
-│   ├── cart.py
 │   ├── services.py
-│   ├── forms.py
+│   ├── views.py
 │   ├── serializers.py
-│   ├── api_views.py
-│   └── tests/
+│   └── ...
 │
 ├── users/
 │   ├── models.py
-│   ├── views.py
 │   ├── forms.py
-│   ├── serializers.py
-│   ├── api_views.py
-│   └── tests/
+│   ├── views.py
+│   └── ...
 │
 ├── reviews/
 │   ├── models.py
 │   ├── views.py
-│   ├── forms.py
-│   ├── serializers.py
-│   ├── api_views.py
-│   └── tests/
+│   └── ...
 │
 ├── payments/
-│   ├── models.py
-│   ├── services.py
-│   ├── admin.py
-│   └── tests/
+│   └── ...
 │
 ├── graphql_api/
-│   ├── __init__.py
-│   ├── schema.py
-│   └── tests.py
+│   └── ...
 │
 ├── templates/
-│   ├── base.html
 │   ├── home.html
 │   ├── product-detail.html
 │   ├── cart.html
 │   ├── checkout.html
 │   ├── login.html
 │   ├── register.html
-│   └── review_edit.html
+│   └── ...
 │
 ├── static/
 ├── media/
 │
 ├── manage.py
 ├── requirements.txt
+├── pyproject.toml
+├── Dockerfile
 ├── docker-compose.yml
-├── .env.example
-├── .gitignore
 └── README.md
 ```
 
@@ -189,89 +192,92 @@ hop_django/
 
 ## Требования
 
-Для запуска проекта локально необходимы:
+Для локального запуска проекта необходимы:
 
-* Python 3.12 или выше;
-* Git.
+* Python 3.13
+* Git
 
-Для запуска PostgreSQL через Docker дополнительно необходимы:
+Для запуска PostgreSQL через Docker:
 
-* Docker;
-* Docker Compose.
+* Docker Desktop
+* Docker Compose
 
 ---
 
 ## Установка
 
-### 1. Клонирование репозитория
+Клонировать репозиторий:
 
 ```powershell
 git clone https://github.com/aolgakazakova-max/my_hop_django.git
+```
+
+Перейти в директорию проекта:
+
+```powershell
 cd my_hop_django
 ```
 
-### 2. Создание виртуального окружения
-
-Windows PowerShell:
+Создать виртуальное окружение:
 
 ```powershell
 python -m venv .venv
 ```
 
-Активация:
+Активировать виртуальное окружение в PowerShell:
 
 ```powershell
 .venv\Scripts\Activate.ps1
 ```
 
-### 3. Установка зависимостей
+Установить зависимости:
 
 ```powershell
-python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
 ---
 
-## Настройка окружения
+## Настройка переменных окружения
 
-В корне проекта необходимо создать файл `.env`.
-
-В качестве основы используется файл `.env.example`.
+Создать файл `.env` на основе `.env.example`:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-После этого при необходимости измените значения переменных в `.env`.
+В `.env` необходимо указать настройки проекта и базы данных.
 
-### Переменные окружения
+Пример:
 
-```text
-DJANGO_SECRET_KEY
-ADMIN_EMAIL
-POSTGRES_DB
-POSTGRES_USER
-POSTGRES_PASSWORD
-POSTGRES_HOST
-POSTGRES_PORT
+```env
+DJANGO_SECRET_KEY=change-me
+ADMIN_EMAIL=admin@example.com
+
+POSTGRES_DB=hop_django
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=change-me
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
 ```
 
-Файл `.env` содержит локальные настройки и секретные данные и не должен загружаться в Git.
+Файл `.env` не должен попадать в Git.
+
+Для Git используется `.env.example` без настоящих секретов.
 
 ---
 
 ## Запуск проекта
 
-В режиме локальной разработки проект использует SQLite.
+### Локальный запуск
 
-Перед первым запуском необходимо выполнить миграции:
+После настройки окружения выполнить:
 
 ```powershell
 python manage.py migrate
 ```
 
-Создать администратора:
+При необходимости создать администратора:
 
 ```powershell
 python manage.py createsuperuser
@@ -283,336 +289,307 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
-После запуска сайт доступен по адресу:
+После запуска приложение доступно по адресу:
 
 ```text
 http://127.0.0.1:8000/
 ```
 
-Панель администратора:
-
-```text
-http://127.0.0.1:8000/admin/
-```
-
-GraphQL в ветке `graphql`:
-
-```text
-http://127.0.0.1:8000/graphql/
-```
-
-На странице GraphQL доступен интерактивный GraphiQL.
-
 ---
 
-## PostgreSQL и Docker
+## Docker Compose
 
-Проект поддерживает PostgreSQL и Docker Compose.
+Проект содержит `docker-compose.yml` с двумя основными сервисами:
 
-Запуск контейнеров:
-
-```powershell
-docker compose up -d
+```text
+docker-compose
+│
+├── web
+│   └── Django application
+│
+└── db
+    └── PostgreSQL 16
 ```
 
-Проверка состояния контейнеров:
+Запустить контейнеры:
+
+```powershell
+docker compose up --build
+```
+
+Или запустить в фоновом режиме:
+
+```powershell
+docker compose up -d --build
+```
+
+Проверить состояние контейнеров:
 
 ```powershell
 docker compose ps
 ```
 
-Применение миграций:
+Выполнить миграции внутри контейнера:
 
 ```powershell
 docker compose exec web python manage.py migrate
 ```
 
-Создание суперпользователя:
+Создать суперпользователя:
 
 ```powershell
 docker compose exec web python manage.py createsuperuser
 ```
 
-Остановка контейнеров:
+Остановить контейнеры:
 
 ```powershell
 docker compose down
 ```
 
-Для остановки контейнеров с удалением volumes:
-
-```powershell
-docker compose down -v
-```
+> `docker compose down -v` также удаляет Docker volumes. Использовать эту команду следует осторожно, поскольку PostgreSQL хранит данные в volume `pg_data`.
 
 ---
 
 ## Миграции
 
-Создание миграций после изменения моделей:
+Создать миграции после изменения моделей:
 
 ```powershell
 python manage.py makemigrations
 ```
 
-Применение миграций:
+Применить миграции:
 
 ```powershell
 python manage.py migrate
-```
-
-Просмотр состояния миграций:
-
-```powershell
-python manage.py showmigrations
 ```
 
 ---
 
 ## Django Admin
 
-Для работы с административной панелью необходимо создать суперпользователя:
+Административная панель Django позволяет управлять основными данными приложения:
 
-```powershell
-python manage.py createsuperuser
-```
+* пользователями;
+* профилями;
+* товарами;
+* категориями;
+* заказами;
+* позициями заказов;
+* отзывами;
+* платежами.
 
-После запуска сервера административная панель доступна по адресу:
+Административная панель доступна по адресу:
 
 ```text
 http://127.0.0.1:8000/admin/
 ```
 
-Через Django Admin можно управлять:
-
-* товарами;
-* категориями;
-* заказами;
-* товарами в заказах;
-* пользователями;
-* профилями;
-* отзывами;
-* платежами.
-
 ---
 
 ## Корзина
 
-Корзина реализована с использованием Django sessions.
+Корзина реализована с использованием **Django Session**.
 
-Пользователь может:
+Товары и их количество сохраняются в сессии пользователя.
 
-* добавить товар в корзину;
-* изменить количество товара;
-* удалить товар;
-* очистить корзину;
-* увидеть общую стоимость заказа.
+Основные операции:
 
-При добавлении и изменении количества выполняется проверка остатка товара.
+```text
+Add to cart
+    ↓
+Django Session
+    ↓
+изменение количества
+    ↓
+удаление товара
+    ↓
+очистка корзины
+```
 
-Пользователь не может добавить в корзину больше товара, чем доступно на складе.
-
-В ветке `graphql` та же session-корзина доступна через GraphQL API.
+Корзина также доступна через REST API и используется GraphQL API.
 
 ---
 
 ## Оформление заказа
 
-Оформление заказа доступно авторизованному пользователю.
+Создание заказа выполняется через сервисный слой:
 
-Форма оформления заказа содержит:
+```text
+orders.services.create_order()
+```
 
-* имя;
-* номер телефона;
-* город;
-* адрес;
-* способ оплаты.
+Основной сценарий:
 
-При создании заказа:
-
-1. Проверяется наличие товара на складе.
-2. Рассчитывается общая стоимость.
-3. Создаётся заказ.
-4. Создаются позиции заказа.
-5. Уменьшается количество товара на складе.
-6. Создаётся платёж.
-7. Обрабатывается mock-платёж.
-8. Обновляется статус заказа.
-9. Пользователю отправляется email с информацией о заказе.
-10. Администратору отправляется уведомление, если указан `ADMIN_EMAIL`.
-11. Корзина очищается.
+```text
+Корзина
+   ↓
+Проверка stock
+   ↓
+Расчёт стоимости
+   ↓
+Создание Order
+   ↓
+Создание OrderItem
+   ↓
+Уменьшение stock
+   ↓
+Создание Payment
+   ↓
+Mock payment
+   ↓
+Обновление статуса
+   ↓
+Отправка email
+   ↓
+Очистка корзины
+```
 
 Создание заказа выполняется внутри транзакции базы данных.
 
-В ветке `graphql` mutation `createOrder` использует существующий сервис `orders.services.create_order()`, поэтому бизнес-логика оформления заказа не дублируется.
+GraphQL mutation `createOrder` использует существующий сервис `orders.services.create_order()`, поэтому бизнес-логика заказа не дублируется между веб-интерфейсом и GraphQL API.
 
 ---
 
-## Платежи
+## Пользователи и авторизация
 
-Для работы с платежами используется отдельное приложение `payments`.
+Веб-интерфейс использует стандартную Django session authentication.
 
-В проекте реализован mock-платёжный сервис.
+Поддерживаются:
 
-Поддерживаются способы оплаты:
+* регистрация;
+* вход по email;
+* выход;
+* профиль пользователя;
+* редактирование профиля;
+* изменение пароля;
+* история заказов.
 
-* банковская карта;
-* Wallet;
-* оплата при получении.
+Для REST API используется JWT-аутентификация.
 
-Статусы платежа:
+Таким образом, в проекте используются разные механизмы в зависимости от интерфейса:
 
 ```text
-pending
-paid
-failed
+Web interface
+    ↓
+Django Session
+
+REST API
+    ↓
+JWT
+
+GraphQL
+    ↓
+Django Session
 ```
-
-Для банковской карты и Wallet mock-платёж переводится в статус `paid`.
-
-Для оплаты при получении используется статус `pending`.
-
-Платёж связан с заказом отношением `OneToOne`.
-
-Реальная платёжная система в проекте не подключена.
-
----
-
-## Пользователи и профиль
-
-Пользователь может:
-
-* зарегистрироваться;
-* войти в аккаунт;
-* выйти из аккаунта;
-* просмотреть профиль;
-* изменить данные профиля;
-* просмотреть свои заказы.
-
-Профиль содержит:
-
-* полное имя;
-* номер телефона;
-* город;
-* адрес.
-
-В ветке `graphql` профиль текущего авторизованного пользователя доступен через GraphQL query `profile`.
 
 ---
 
 ## Отзывы
 
-Авторизованный пользователь может оставить отзыв на товар после его покупки.
+Модель `Review` содержит:
 
-Отзыв содержит:
-
-* оценку от 1 до 5;
-* комментарий;
 * пользователя;
+* товар;
+* рейтинг от 1 до 5;
+* комментарий;
 * дату создания.
 
 Для одного пользователя и одного товара разрешён только один отзыв.
 
-Пользователь может:
-
-* создать свой отзыв;
-* редактировать свой отзыв;
-* удалить свой отзыв.
-
-Отзывы других пользователей нельзя редактировать или удалять.
-
-В ветке `graphql` отзывы доступны через query `reviews`.
+Пользователь может редактировать только собственный отзыв.
 
 ---
 
 ## REST API
 
-Для API используется Django REST Framework.
+REST API реализован с использованием **Django REST Framework**.
 
-API предоставляет работу с основными ресурсами проекта:
+Основные API-разделы:
 
-* товары;
-* заказы;
-* пользователи;
-* корзина;
-* отзывы.
+```text
+/api/products/
+/api/categories/
+/api/orders/
+/api/reviews/
+/api/users/
+/api/cart/
+```
 
-Защищённые API endpoints используют аутентификацию.
+Корзина поддерживает основные операции:
+
+```text
+GET
+POST
+PATCH
+DELETE
+```
 
 ---
 
 ## JWT-аутентификация
 
-Для API используется JWT-аутентификация.
+Для API используется JWT.
 
-Основные endpoints:
+Получение токенов:
 
 ```text
-/api/token/
-/api/token/refresh/
+POST /api/token/
 ```
 
-После получения access token он передаётся в HTTP-заголовке:
+Обновление access token:
+
+```text
+POST /api/token/refresh/
+```
+
+После получения access token он передаётся в запросах:
 
 ```text
 Authorization: Bearer <access_token>
 ```
 
-Refresh token используется для получения нового access token.
-
 ---
 
-## OpenAPI и Swagger
+## Swagger / OpenAPI
 
-Документация REST API генерируется с помощью `drf-spectacular`.
+Документация REST API создаётся с помощью **drf-spectacular**.
 
-В проекте настроена OpenAPI-схема и Swagger UI.
-
-Точные URL документации определяются в `config/urls.py`.
-
-Swagger позволяет просматривать доступные API endpoints, параметры запросов и ответы API.
-
----
-
-## GraphQL
-
-GraphQL реализован в отдельном приложении `graphql_api` с использованием Strawberry.
-
-GraphQL endpoint:
+Swagger UI:
 
 ```text
-http://127.0.0.1:8000/graphql/
+http://127.0.0.1:8000/api/docs/
 ```
 
-Интерактивный GraphiQL доступен по тому же адресу.
+OpenAPI schema:
+
+```text
+http://127.0.0.1:8000/api/schema/
+```
+
+Swagger позволяет просматривать доступные endpoints, параметры запросов и схемы ответов.
+
+---
+
+## GraphQL API
+
+GraphQL API реализован с использованием **Strawberry GraphQL**.
+
+GraphQL является частью текущей основной ветки `main`.
 
 ### Queries
 
-Поддерживаются следующие queries:
+Поддерживаются запросы для:
 
-```text
-categories
-products
-reviews
-profile
-orders
-cart
-```
+* категорий;
+* товаров;
+* отзывов;
+* профиля пользователя;
+* заказов;
+* корзины.
 
-### Mutations
-
-Поддерживаются следующие mutations:
-
-```text
-addToCart
-updateCart
-removeFromCart
-createOrder
-```
-
-### Получение товаров
-
-Пример запроса:
+Пример:
 
 ```graphql
 query {
@@ -625,299 +602,75 @@ query {
 }
 ```
 
-### Получение профиля
+### Mutations
 
-Для авторизованного пользователя:
+Поддерживаются операции:
 
-```graphql
-query {
-  profile {
-    id
-    fullName
-    phone
-    city
-    address
-  }
-}
-```
+* `addToCart`;
+* `updateCart`;
+* `removeFromCart`;
+* `createOrder`.
 
-### Получение заказов
-
-```graphql
-query {
-  orders {
-    id
-    status
-    paymentType
-    totalPrice
-    shippingAddress
-    createdAt
-    items {
-      id
-      quantity
-      price
-      product {
-        id
-        name
-      }
-    }
-  }
-}
-```
-
-Пользователь получает только свои заказы.
-
-### Получение корзины
-
-```graphql
-query {
-  cart {
-    totalPrice
-    items {
-      quantity
-      totalPrice
-      product {
-        id
-        name
-        price
-      }
-    }
-  }
-}
-```
-
-Корзина использует ту же Django session, что и обычный веб-интерфейс.
-
-### Добавление товара в корзину
+Пример:
 
 ```graphql
 mutation {
   addToCart(productId: 1, quantity: 2) {
-    totalPrice
-    items {
-      quantity
-      totalPrice
-      product {
-        id
-        name
-        price
-      }
-    }
+    ...
   }
 }
 ```
 
-### Изменение количества товара
-
-```graphql
-mutation {
-  updateCart(productId: 1, quantity: 3) {
-    totalPrice
-    items {
-      quantity
-      totalPrice
-      product {
-        id
-        name
-        price
-      }
-    }
-  }
-}
-```
-
-### Удаление товара из корзины
-
-```graphql
-mutation {
-  removeFromCart(productId: 1) {
-    totalPrice
-    items {
-      quantity
-      totalPrice
-      product {
-        id
-        name
-        price
-      }
-    }
-  }
-}
-```
-
-### Создание заказа
-
-Создание заказа доступно авторизованному пользователю.
-
-```graphql
-mutation {
-  createOrder(
-    input: {
-      fullName: "Test User"
-      phoneNumber: "0000000000"
-      city: "Test City"
-      address: "Test Address"
-      paymentType: "debit"
-    }
-  ) {
-    id
-    status
-    paymentType
-    totalPrice
-    shippingAddress
-    items {
-      id
-      quantity
-      price
-      product {
-        id
-        name
-      }
-    }
-  }
-}
-```
-
-Mutation `createOrder` использует существующий сервис оформления заказа и после успешного создания заказа очищает session-корзину.
-
-### Типы GraphQL
-
-В проекте определены GraphQL-типы для:
-
-```text
-CategoryType
-ProductType
-ProfileType
-ReviewType
-OrderItemType
-OrderType
-CartItemType
-CartType
-```
-
-Для оформления заказа используется:
-
-```text
-CreateOrderInput
-```
-
-### Аутентификация
-
-GraphQL использует Django session пользователя.
-
-Поэтому авторизованный пользователь GraphQL получает доступ к своему:
-
-* профилю;
-* заказам;
-* session-корзине.
+GraphQL использует существующую бизнес-логику проекта, в том числе сервис `orders.services.create_order()`.
 
 ---
 
 ## Тестирование
 
-Для проекта реализованы автоматические тесты Django.
-
-Запуск всех тестов:
+Для запуска всех тестов:
 
 ```powershell
 python manage.py test
 ```
 
-Тестами покрываются:
+Тестами покрываются основные части проекта:
 
 * корзина;
-* бизнес-логика заказов;
-* checkout;
 * товары;
+* заказы;
+* оформление заказа;
 * пользователи;
+* авторизация;
 * отзывы;
 * платежи;
 * REST API;
-* аутентификация;
-* работа сервисов;
+* JWT-аутентификация;
+* сервисный слой;
 * GraphQL API.
 
-Для GraphQL создан отдельный файл:
+Текущий полный набор тестов проекта:
 
 ```text
-graphql_api/tests.py
+141 tests
 ```
 
-Запуск только GraphQL-тестов:
+Последний успешный локальный запуск:
+
+```text
+141 tests OK
+```
+
+Для запуска тестов отдельного приложения можно использовать:
 
 ```powershell
 python manage.py test graphql_api
 ```
 
-Текущая тестовая коллекция ветки `graphql` содержит:
-
-```text
-141 test(s)
-```
-
-Последний полный локальный запуск:
-
-```text
-Ran 141 tests in 133.541s
-
-OK
-```
-
-GraphQL отдельно:
-
-```text
-Ran 10 tests
-
-OK
-```
-
 ---
 
-## Проверка качества кода
+## Качество кода
 
-### Ruff
-
-Для проверки стиля и качества Python-кода используется Ruff.
-
-Запуск проверки:
-
-```powershell
-ruff check .
-```
-
-Текущий проект проходит проверку без ошибок:
-
-```text
-All checks passed!
-```
-
-Для автоматического исправления поддерживаемых проблем:
-
-```powershell
-ruff check . --fix
-```
-
----
-
-## Проверка типизации
-
-Для статической проверки типов используется mypy.
-
-Запуск:
-
-```powershell
-mypy .
-```
-
-Текущая ветка `graphql` проходит проверку:
-
-```text
-Success: no issues found in 73 source files
-```
-
----
-
-## Django System Check
+### Django check
 
 Проверка конфигурации Django:
 
@@ -925,142 +678,175 @@ Success: no issues found in 73 source files
 python manage.py check
 ```
 
-Команда должна завершиться без ошибок.
-
-Текущий проект проходит проверку:
-
-```text
-System check identified no issues (0 silenced).
-```
-
----
-
-## CI GitHub Actions
-
-Для автоматической проверки проекта используется GitHub Actions.
-
-Workflow находится в:
-
-```text
-.github/workflows/ci.yml
-```
-
-CI запускается:
-
-* при push в `main`;
-* при создании Pull Request в `main`.
-
-В CI выполняются:
-
-1. Получение исходного кода из GitHub.
-2. Установка Python.
-3. Установка зависимостей.
-4. Запуск PostgreSQL.
-5. Проверка Django.
-6. Выполнение миграций.
-7. Запуск всех тестов.
-
-Для CI используется отдельный файл настроек:
-
-```text
-config/settings/ci.py
-```
-
-CI работает с PostgreSQL.
-
-GraphQL разрабатывается в отдельной ветке `graphql` и не входит в стабильную ветку `main`, пока изменения не будут объединены.
-
----
-
-## Полезные команды
-
-### Запуск сервера
-
-```powershell
-python manage.py runserver
-```
-
-### Проверка Django
-
-```powershell
-python manage.py check
-```
-
-### Создание миграций
-
-```powershell
-python manage.py makemigrations
-```
-
-### Применение миграций
-
-```powershell
-python manage.py migrate
-```
-
-### Создание администратора
-
-```powershell
-python manage.py createsuperuser
-```
-
-### Запуск всех тестов
-
-```powershell
-python manage.py test
-```
-
-### Запуск GraphQL-тестов
-
-```powershell
-python manage.py test graphql_api
-```
-
 ### Ruff
+
+Проверка Python-кода:
 
 ```powershell
 ruff check .
 ```
 
+Автоматическое исправление поддерживаемых проблем:
+
+```powershell
+ruff check . --fix
+```
+
 ### Mypy
+
+Проверка типов:
 
 ```powershell
 mypy .
 ```
 
-### Django shell
+---
+
+## CI/CD
+
+Проект использует **GitHub Actions**.
+
+### CI
+
+CI автоматически выполняет проверки проекта при работе с репозиторием.
+
+Основные этапы:
+
+```text
+Push / Pull Request
+        ↓
+GitHub Actions
+        ↓
+Установка Python
+        ↓
+Установка зависимостей
+        ↓
+Запуск PostgreSQL
+        ↓
+Django checks
+        ↓
+Миграции
+        ↓
+Тесты
+        ↓
+Результат
+```
+
+Для CI используется отдельный набор настроек:
+
+```text
+config.settings.ci
+```
+
+CI также проверяет проект с PostgreSQL.
+
+### CD
+
+В проекте настроен отдельный workflow для CD.
+
+После успешного прохождения необходимых проверок выполняется автоматизированный CD workflow.
+
+---
+
+## Полезные команды
+
+Запуск Django:
+
+```powershell
+python manage.py runserver
+```
+
+Проверка Django:
+
+```powershell
+python manage.py check
+```
+
+Создание миграций:
+
+```powershell
+python manage.py makemigrations
+```
+
+Применение миграций:
+
+```powershell
+python manage.py migrate
+```
+
+Создание администратора:
+
+```powershell
+python manage.py createsuperuser
+```
+
+Запуск тестов:
+
+```powershell
+python manage.py test
+```
+
+Ruff:
+
+```powershell
+ruff check .
+```
+
+Mypy:
+
+```powershell
+mypy .
+```
+
+Django shell:
 
 ```powershell
 python manage.py shell
 ```
 
-### Git status
+Проверка Git:
 
 ```powershell
 git status
 ```
 
-### Git pull
+Получение изменений:
 
 ```powershell
 git pull
 ```
 
-### Git push
+Отправка изменений:
 
 ```powershell
 git push
+```
+
+Docker:
+
+```powershell
+docker compose up --build
+```
+
+Проверка контейнеров:
+
+```powershell
+docker compose ps
+```
+
+Остановка контейнеров:
+
+```powershell
+docker compose down
 ```
 
 ---
 
 ## Безопасность
 
-Секретные данные должны храниться в переменных окружения.
+Секретные данные не должны храниться в Git.
 
-Файл `.env` не должен попадать в Git.
-
-Также в репозиторий не должны попадать:
+В `.gitignore` исключены:
 
 ```text
 .env
@@ -1072,78 +858,53 @@ __pycache__/
 Для production необходимо дополнительно настроить:
 
 * `DEBUG=False`;
-* безопасный `DJANGO_SECRET_KEY`;
+* безопасный `SECRET_KEY`;
 * `ALLOWED_HOSTS`;
 * HTTPS;
 * secure cookies;
 * production database;
-* production email settings;
-* хранение static/media файлов.
+* production email configuration;
+* корректную настройку static/media files.
 
 ---
 
 ## Статус проекта
 
-### Ветка `main`
+Текущая основная ветка:
 
-Основная версия проекта содержит:
+```text
+main
+```
 
-* Django интернет-магазин;
+В текущую версию проекта входят:
+
+* Django web application;
 * каталог товаров;
-* поиск;
-* фильтрацию;
-* сортировку;
-* изображения товаров;
-* контроль остатков;
-* сессионную корзину;
+* категории;
+* поиск, фильтрация и сортировка;
+* session-based корзина;
 * оформление заказов;
-* историю заказов;
-* регистрацию и авторизацию;
+* mock-платежи;
 * личный кабинет;
 * отзывы;
-* mock-платежи;
-* email-уведомления;
-* Django REST Framework API;
-* JWT-аутентификацию;
-* OpenAPI/Swagger;
+* REST API;
+* JWT-аутентификация;
+* Swagger / OpenAPI;
+* GraphQL API;
 * PostgreSQL;
 * Docker Compose;
-* Django Admin;
 * автоматические тесты;
 * Ruff;
 * mypy;
-* GitHub Actions CI.
+* GitHub Actions CI;
+* GitHub Actions CD.
 
-### Ветка `graphql`
+GraphQL уже объединён с основной веткой `main` и является частью текущей версии проекта.
 
-В ветке `graphql` дополнительно реализован:
-
-* GraphQL API;
-* Strawberry;
-* Strawberry Django integration;
-* GraphQL queries для каталога, отзывов, профиля, заказов и корзины;
-* GraphQL mutations для работы с корзиной;
-* GraphQL mutation для создания заказа;
-* 10 автоматических GraphQL-тестов.
-
-На текущем этапе ветка `graphql` проходит:
+Последний локальный результат тестирования:
 
 ```text
-Django check   ✅
-Ruff           ✅
-mypy           ✅
-GraphQL tests  ✅ 10/10
-Full tests     ✅ 141/141
+141 tests OK
 ```
 
----
-
-## Назначение проекта
-
-Проект создан в учебных целях для демонстрации разработки интернет-магазина на Django и Django REST Framework, включая веб-интерфейс, REST API, GraphQL API, работу с базой данных, авторизацию, тестирование и автоматическую проверку качества кода.
-
----
-
-## Лицензия
-
-Проект предназначен для учебных и портфолио-целей.
+Проект готов для дальнейшей проверки требований технического задания и демонстрации преподавателю.
