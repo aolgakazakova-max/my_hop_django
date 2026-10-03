@@ -50,8 +50,11 @@ def create_order(user, cart, data):
         payment_type=payment_type,
         total_price=total,
         shipping_address=(
-            f'{data["full_name"]}, {data["phone_number"]}\n'
-            f'{data["city"]}, {data["address"]}'
+            data.get('shipping_address')
+            or (
+                f'{data["full_name"]}, {data["phone_number"]}\n'
+                f'{data["city"]}, {data["address"]}'
+            )
         ),
     )
 

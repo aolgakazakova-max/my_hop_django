@@ -49,6 +49,15 @@ class ReviewViewSet(viewsets.ModelViewSet):
                 'You can edit only your own review.'
             )
 
+        if (
+            'product' in serializer.validated_data
+            and serializer.validated_data['product']
+            != serializer.instance.product
+        ):
+            raise PermissionDenied(
+                'You cannot change the product of an existing review.'
+            )
+
         serializer.save()
 
     def perform_destroy(self, instance):

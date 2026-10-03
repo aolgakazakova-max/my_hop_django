@@ -1,5 +1,13 @@
 from django.contrib import messages
-from django.db.models import Avg, Q
+from django.db.models import (
+    Avg,
+    IntegerField,
+    OuterRef,
+    Q,
+    Subquery,
+    Sum,
+)
+from django.db.models.functions import Coalesce
 from django.shortcuts import redirect
 from django.views.generic import DetailView, ListView
 
@@ -16,20 +24,53 @@ class ProductListView(ListView):
     paginate_by = 9
 
     def get_queryset(self):
+        sold_quantity = (
+            OrderItem.objects
+            .filter(
+                product=OuterRef('pk'),
+                order__status__in=[
+                    'paid',
+                    'shipped',
+                    'delivered',
+                ],
+            )
+            .values('product')
+            .annotate(
+                total_sold=Sum('quantity')
+            )
+            .values('total_sold')
+        )
+
         qs = (
-            Product.objects.filter(is_active=True)
+            Product.objects
+            .filter(is_active=True)
             .select_related('category')
-            .annotate(avg_rating=Avg('reviews__rating'))
+            .annotate(
+                avg_rating=Avg('reviews__rating'),
+                popularity=Coalesce(
+                    Subquery(
+                        sold_quantity,
+                        output_field=IntegerField(),
+                    ),
+                    0,
+                ),
+            )
         )
 
         query = self.request.GET.get('q')
+
         if query:
-            qs = qs.filter(Q(name__icontains=query) | Q(description__icontains=query))
+            qs = qs.filter(
+                Q(name__icontains=query)
+                | Q(description__icontains=query)
+            )
 
         categories = self.request.GET.getlist('category')
 
         if categories:
-            qs = qs.filter(category__slug__in=categories)
+            qs = qs.filter(
+                category__slug__in=categories
+            )
 
         min_price = self.request.GET.get('min_price')
         max_price = self.request.GET.get('max_price')
@@ -45,24 +86,14 @@ class ProductListView(ListView):
             'price_asc': 'price',
             'price_desc': '-price',
             'rating': '-avg_rating',
+            'popular': '-popularity',
         }
+
         sort = self.request.GET.get('sort', 'new')
-        return qs.order_by(sort_map.get(sort, '-created_at'))
 
-
-    def get_context_data(self,  **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['categories'] = Category.objects.all()
-        ctx['query'] = self.request.GET.get('q', '')
-        ctx['min_price'] = self.request.GET.get('min_price', '')
-        ctx['max_price'] = self.request.GET.get('max_price', '')
-        ctx['selected_categories'] = self.request.GET.getlist('category')
-        ctx['current_sort'] = self.request.GET.get('sort', 'new')
-
-        params = self.request.GET.copy()
-        params.pop('page', None)
-        ctx['querystring'] = params.urlencode()
-        return ctx
+        return qs.order_by(
+            sort_map.get(sort, '-created_at')
+        )
 
 
 class ProductDetailView(DetailView):

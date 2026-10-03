@@ -1,9 +1,9 @@
-from django.db import transaction
 from rest_framework import serializers
 
 from products.models import Product
 
 from .models import Order, OrderItem
+from .services import OutOfStock, create_order
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -44,6 +44,13 @@ class OrderItemWriteSerializer(serializers.Serializer):
 
 class OrderCreateSerializer(serializers.Serializer):
     shipping_address = serializers.CharField()
+
+    payment_type = serializers.ChoiceField(
+        choices=Order.PaymentType.choices,
+        default=Order.PaymentType.DEBIT,
+        required=False,
+    )
+
     items = OrderItemWriteSerializer(many=True)
 
     def validate_items(self, data):
@@ -52,68 +59,64 @@ class OrderCreateSerializer(serializers.Serializer):
                 'Заказ должен содержать хотя бы один элемент.'
             )
 
+        product_ids = [
+            item['product_id']
+            for item in data
+        ]
+
+        if len(product_ids) != len(set(product_ids)):
+            raise serializers.ValidationError(
+                'Один и тот же товар нельзя добавить в заказ несколько раз.'
+            )
+
         return data
 
     def create(self, validated_data):
         user = self.context['request'].user
 
-        with transaction.atomic():
-            total = 0
+        cart_items = []
 
-            products = []
+        for item in validated_data['items']:
+            product_id = item['product_id']
+            quantity = item['quantity']
 
-            for item in validated_data['items']:
-                product_id = item['product_id']
-                quantity = item['quantity']
-
-                try:
-                    product = Product.objects.get(
-                        id=product_id,
-                        is_active=True,
-                    )
-                except Product.DoesNotExist:
-                    raise serializers.ValidationError(
-                        f'Товар с id={product_id} не найден.'
-                    )
-
-                if product.stock < quantity:
-                    raise serializers.ValidationError(
-                        f'Не хватает "{product.name}" на складе.'
-                    )
-
-                total += product.price * quantity
-
-                products.append(
-                    {
-                        'product': product,
-                        'quantity': quantity,
-                    }
+            try:
+                product = Product.objects.get(
+                    id=product_id,
+                    is_active=True,
+                )
+            except Product.DoesNotExist:
+                raise serializers.ValidationError(
+                    f'Товар с id={product_id} не найден.'
                 )
 
-            order = Order.objects.create(
-                user=user,
-                status=Order.Status.PAID,
-                total_price=total,
-                shipping_address=validated_data['shipping_address'],
+            cart_items.append(
+                {
+                    'product': product,
+                    'quantity': quantity,
+                }
             )
 
-            for item in products:
-                product = item['product']
-                quantity = item['quantity']
-
-                product.stock -= quantity
-                product.save(
-                    update_fields=['stock'],
-                )
-
-                OrderItem.objects.create(
-                    order=order,
-                    product=product,
-                    quantity=quantity,
-                    price=product.price,
-                )
-
-            return order
+        try:
+            return create_order(
+                user=user,
+                cart=cart_items,
+                data={
+                    'shipping_address': validated_data['shipping_address'],
+                    'payment_type': validated_data.get(
+                        'payment_type',
+                        Order.PaymentType.DEBIT,
+                    ),
+                },
+            )
+        except OutOfStock as error:
+            raise serializers.ValidationError(
+                {'items': str(error)}
+            )
+        except ValueError as error:
+            raise serializers.ValidationError(
+                {'detail': str(error)}
+            )
 
 
 class CartItemSerializer(serializers.Serializer):

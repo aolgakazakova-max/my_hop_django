@@ -295,6 +295,50 @@ class OrderAPITests(APITestCase):
             10,
         )
 
+
+    def test_create_order_rejects_duplicate_product(self):
+        data = {
+            'shipping_address': 'Amsterdam, Test Street 10',
+            'items': [
+                {
+                    'product_id': self.product.id,
+                    'quantity': 6,
+                },
+                {
+                    'product_id': self.product.id,
+                    'quantity': 6,
+                },
+            ],
+        }
+
+        response = self.client.post(
+            self.orders_url,
+            data,
+            format='json',
+        )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.assertIn(
+            'items',
+            response.data,
+        )
+
+        self.assertEqual(
+            Order.objects.count(),
+            0,
+        )
+
+        self.product.refresh_from_db()
+
+        self.assertEqual(
+            self.product.stock,
+            10,
+        )
+
     def test_get_empty_cart(self):
         response = self.client.get(self.cart_url)
 

@@ -217,6 +217,36 @@ class ReviewAPITests(TestCase):
             'Изменённый отзыв',
         )
 
+    def test_user_cannot_change_product_of_own_review(self):
+        """Пользователь не может изменить товар у своего отзыва."""
+        another_product = Product.objects.create(
+            name='Another Beer',
+            slug='another-beer',
+            category=self.category,
+            price=Decimal('15.00'),
+            stock=10,
+            is_active=True,
+        )
+
+        self.client.force_login(self.user)
+
+        response = self.client.patch(
+            self.api_url(f'{self.review.pk}/'),
+            data={
+                'product': another_product.pk,
+            },
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 403)
+
+        self.review.refresh_from_db()
+
+        self.assertEqual(
+            self.review.product,
+            self.product,
+        )
+
     def test_user_cannot_delete_someone_elses_review(self):
         """Пользователь не может удалить чужой отзыв."""
         self.client.force_login(self.other_user)

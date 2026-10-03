@@ -3,6 +3,14 @@ from typing import cast
 
 import strawberry
 import strawberry_django
+from django.db.models import (
+    Count,
+    IntegerField,
+    OuterRef,
+    Subquery,
+    Sum,
+)
+from django.db.models.functions import Coalesce
 
 from orders.cart import Cart
 from orders.models import Order, OrderItem
@@ -85,6 +93,25 @@ class CartType:
     total_price: str
 
 
+@strawberry.type
+class OrderAnalyticsType:
+    order_count: int
+    revenue: str
+    average_order_value: str
+
+
+@strawberry.type
+class ProductAnalyticsType:
+    popular_products: list[ProductType]
+    total_stock: int
+
+
+@strawberry.type
+class UserAnalyticsType:
+    active_users: int
+    repeat_customers: int
+
+
 @strawberry.input
 class CreateOrderInput:
     full_name: str
@@ -112,6 +139,16 @@ def get_cart_data(cart: Cart) -> CartType:
             Decimal(str(cart.get_total_price()))
         ),
     )
+
+
+def get_completed_statuses():
+    """Return order statuses included in sales analytics."""
+
+    return [
+        Order.Status.PAID,
+        Order.Status.SHIPPED,
+        Order.Status.DELIVERED,
+    ]
 
 
 @strawberry.type
@@ -184,6 +221,129 @@ class Query:
         cart = Cart(info.context.request)
 
         return get_cart_data(cart)
+
+    @strawberry.field
+    def order_analytics(self) -> OrderAnalyticsType:
+        """Return analytics for completed orders."""
+
+        completed_statuses = get_completed_statuses()
+
+        completed_orders = Order.objects.filter(
+            status__in=completed_statuses,
+        )
+
+        order_count = completed_orders.count()
+
+        revenue = completed_orders.aggregate(
+            total=Sum('total_price'),
+        )['total'] or Decimal('0.00')
+
+        if order_count:
+            average_order_value = (
+                revenue / order_count
+            )
+        else:
+            average_order_value = Decimal('0.00')
+
+        return OrderAnalyticsType(
+            order_count=order_count,
+            revenue=str(
+                revenue.quantize(Decimal('0.01'))
+            ),
+            average_order_value=str(
+                average_order_value.quantize(
+                    Decimal('0.001')
+                )
+            ),
+        )
+
+    @strawberry.field
+    def product_analytics(self) -> ProductAnalyticsType:
+        """Return product sales and stock analytics."""
+
+        completed_statuses = get_completed_statuses()
+
+        sold_quantity = (
+            OrderItem.objects
+            .filter(
+                product=OuterRef('pk'),
+                order__status__in=completed_statuses,
+            )
+            .values('product')
+            .annotate(
+                total=Sum('quantity'),
+            )
+            .values('total')
+        )
+
+        products = (
+            Product.objects
+            .filter(is_active=True)
+            .annotate(
+                sold_quantity=Coalesce(
+                    Subquery(
+                        sold_quantity,
+                        output_field=IntegerField(),
+                    ),
+                    0,
+                ),
+            )
+            .order_by(
+                '-sold_quantity',
+                'id',
+            )
+        )
+
+        total_stock = (
+            Product.objects
+            .filter(is_active=True)
+            .aggregate(
+                total=Sum('stock'),
+            )['total'] or 0
+        )
+
+        popular_products = [
+            cast(ProductType, product)
+            for product in products
+            if product.sold_quantity > 0
+        ]
+
+        return ProductAnalyticsType(
+            popular_products=popular_products,
+            total_stock=total_stock,
+        )
+
+    @strawberry.field
+    def user_analytics(self) -> UserAnalyticsType:
+        """Return customer activity analytics."""
+
+        completed_statuses = get_completed_statuses()
+
+        completed_orders = Order.objects.filter(
+            status__in=completed_statuses,
+        )
+
+        active_users = (
+            completed_orders
+            .values('user')
+            .distinct()
+            .count()
+        )
+
+        repeat_customers = (
+            completed_orders
+            .values('user')
+            .annotate(
+                order_count=Count('id'),
+            )
+            .filter(order_count__gt=1)
+            .count()
+        )
+
+        return UserAnalyticsType(
+            active_users=active_users,
+            repeat_customers=repeat_customers,
+        )
 
 
 @strawberry.type

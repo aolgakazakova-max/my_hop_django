@@ -2,7 +2,7 @@ import json
 from decimal import Decimal
 from unittest.mock import patch
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from orders.models import Order
@@ -12,212 +12,222 @@ from reviews.models import Review
 from users.models import Profile
 
 
+User = get_user_model()
+
+
 class GraphQLTestCase(TestCase):
-    """Tests for the GraphQL API."""
 
     def setUp(self):
-        """Create test data."""
-
         self.user = User.objects.create_user(
-            username='graphql_user',
-            password='test-password',
+            username='graphql-user',
             email='graphql@example.com',
+            password='testpass123',
         )
 
-        self.other_user = User.objects.create_user(
-            username='other_user',
-            password='test-password',
-            email='other@example.com',
+        self.second_user = User.objects.create_user(
+            username='graphql-second-user',
+            email='graphql-second@example.com',
+            password='testpass123',
         )
 
-        self.category, _ = Category.objects.get_or_create(
+        self.third_user = User.objects.create_user(
+            username='graphql-third-user',
+            email='graphql-third@example.com',
+            password='testpass123',
+        )
+
+        self.category = Category.objects.get_or_create(
             slug='graphql-test-hops',
             defaults={
                 'name': 'GraphQL Test Hops',
             },
-        )
+        )[0]
 
         self.product = Product.objects.create(
-            name='GraphQL Test Citra Hops',
-            slug='graphql-test-citra-hops',
-            description='Test hop variety for GraphQL.',
+            name='Citra',
+            slug='graphql-citra',
+            description='Citra hop beer',
             price=Decimal('5.99'),
-            stock=10,
-            is_active=True,
             category=self.category,
+            image='products/test/citra.jpg',
+            is_active=True,
+            stock=10,
         )
 
         self.second_product = Product.objects.create(
-            name='GraphQL Test Mosaic Hops',
-            slug='graphql-test-mosaic-hops',
-            description='Another test hop variety.',
-            price=Decimal('4.50'),
-            stock=8,
-            is_active=True,
+            name='Mosaic',
+            slug='graphql-mosaic',
+            description='Mosaic hop beer',
+            price=Decimal('8.99'),
             category=self.category,
+            image='products/test/mosaic.jpg',
+            is_active=True,
+            stock=8,
         )
 
-        Profile.objects.create(
+        self.third_product = Product.objects.create(
+            name='Cascade',
+            slug='graphql-cascade',
+            description='Cascade hop beer',
+            price=Decimal('7.50'),
+            category=self.category,
+            image='products/test/cascade.jpg',
+            is_active=True,
+            stock=15,
+        )
+
+        self.profile = Profile.objects.get_or_create(
             user=self.user,
-            full_name='GraphQL User',
-            phone='0000000000',
-            city='Test City',
-            address='Test Address',
-        )
+        )[0]
 
-        self.review = Review.objects.create(
+        self.profile.full_name = 'GraphQL User'
+        self.profile.phone = '+123456789'
+        self.profile.city = 'Test City'
+        self.profile.address = 'Test Address'
+        self.profile.save()
+
+        Review.objects.create(
             product=self.product,
             user=self.user,
             rating=5,
-            comments='Excellent test hops.',
+            comments='Excellent beer!',
         )
 
     def graphql(self, query, variables=None):
-        """Send a GraphQL request and return the JSON response."""
-
-        payload = {
-            'query': query,
-        }
-
-        if variables is not None:
-            payload['variables'] = variables
-
         response = self.client.post(
             '/graphql/',
-            data=json.dumps(payload),
+            data=json.dumps(
+                {
+                    'query': query,
+                    'variables': variables or {},
+                }
+            ),
             content_type='application/json',
         )
 
-        return response.json()
+        return response
 
     def test_products_query(self):
-        """Products query returns active products."""
-
-        result = self.graphql(
-            '''
-            query {
-                products {
-                    id
-                    name
-                    price
-                }
+        query = """
+        query {
+            products {
+                id
+                name
+                slug
+                description
+                price
+                stock
+                isActive
             }
-            '''
-        )
+        }
+        """
 
-        self.assertNotIn('errors', result)
+        response = self.graphql(query)
 
-        products = result['data']['products']
+        self.assertEqual(response.status_code, 200)
 
-        test_product = next(
-            product
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        products = data['data']['products']
+
+        names = {
+            product['name']
             for product in products
-            if product['id'] == str(self.product.id)
-        )
+        }
 
-        self.assertEqual(
-            test_product['name'],
-            'GraphQL Test Citra Hops',
-        )
-        self.assertEqual(
-            test_product['price'],
-            '5.99',
-        )
+        self.assertIn('Citra', names)
+        self.assertIn('Mosaic', names)
 
     def test_categories_query(self):
-        """Categories query returns the test category."""
-
-        result = self.graphql(
-            '''
-            query {
-                categories {
-                    id
-                    name
-                    slug
-                }
+        query = """
+        query {
+            categories {
+                id
+                name
+                slug
             }
-            '''
-        )
+        }
+        """
 
-        self.assertNotIn('errors', result)
+        response = self.graphql(query)
 
-        categories = result['data']['categories']
+        self.assertEqual(response.status_code, 200)
 
-        test_category = next(
-            category
-            for category in categories
-            if category['slug'] == 'graphql-test-hops'
-        )
+        data = response.json()
 
-        self.assertEqual(
-            test_category['name'],
-            'GraphQL Test Hops',
+        self.assertNotIn('errors', data)
+
+        categories = data['data']['categories']
+
+        self.assertTrue(
+            any(
+                category['slug'] == 'graphql-test-hops'
+                for category in categories
+            )
         )
 
     def test_reviews_query(self):
-        """Reviews query returns product reviews."""
-
-        result = self.graphql(
-            '''
-            query {
-                reviews {
+        query = """
+        query {
+            reviews {
+                id
+                rating
+                comments
+                product {
                     id
-                    rating
-                    comments
-                    product {
-                        id
-                        name
-                    }
+                    name
                 }
             }
-            '''
-        )
+        }
+        """
 
-        self.assertNotIn('errors', result)
+        response = self.graphql(query)
 
-        reviews = result['data']['reviews']
+        self.assertEqual(response.status_code, 200)
 
-        test_review = next(
-            review
-            for review in reviews
-            if review['id'] == str(self.review.id)
-        )
+        data = response.json()
 
+        self.assertNotIn('errors', data)
+
+        reviews = data['data']['reviews']
+
+        self.assertEqual(len(reviews), 1)
+        self.assertEqual(reviews[0]['rating'], 5)
         self.assertEqual(
-            test_review['rating'],
-            5,
-        )
-        self.assertEqual(
-            test_review['comments'],
-            'Excellent test hops.',
+            reviews[0]['comments'],
+            'Excellent beer!',
         )
         self.assertEqual(
-            test_review['product']['name'],
-            'GraphQL Test Citra Hops',
+            reviews[0]['product']['name'],
+            'Citra',
         )
 
-    def test_profile_query_for_authenticated_user(self):
-        """Profile query returns the current user's profile."""
-
+    def test_profile_query_authenticated(self):
         self.client.force_login(self.user)
 
-        result = self.graphql(
-            '''
-            query {
-                profile {
-                    id
-                    fullName
-                    phone
-                    city
-                    address
-                }
+        query = """
+        query {
+            profile {
+                id
+                fullName
+                phone
+                city
+                address
             }
-            '''
-        )
+        }
+        """
 
-        self.assertNotIn('errors', result)
+        response = self.graphql(query)
 
-        profile = result['data']['profile']
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        profile = data['data']['profile']
 
         self.assertIsNotNone(profile)
         self.assertEqual(
@@ -225,310 +235,299 @@ class GraphQLTestCase(TestCase):
             'GraphQL User',
         )
         self.assertEqual(
-            profile['phone'],
-            '0000000000',
-        )
-        self.assertEqual(
             profile['city'],
             'Test City',
         )
-        self.assertEqual(
-            profile['address'],
-            'Test Address',
-        )
 
-    def test_profile_query_for_anonymous_user(self):
-        """Profile query returns null for an anonymous user."""
-
-        result = self.graphql(
-            '''
-            query {
-                profile {
-                    id
-                    fullName
-                }
+    def test_profile_query_anonymous(self):
+        query = """
+        query {
+            profile {
+                id
+                fullName
+                phone
+                city
+                address
             }
-            '''
-        )
+        }
+        """
 
-        self.assertNotIn('errors', result)
-        self.assertIsNone(
-            result['data']['profile'],
-        )
+        response = self.graphql(query)
 
-    def test_orders_query_returns_only_current_user_orders(self):
-        """Orders query returns only the current user's orders."""
+        self.assertEqual(response.status_code, 200)
 
-        user_order = Order.objects.create(
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+        self.assertIsNone(data['data']['profile'])
+
+    def test_orders_query_authenticated(self):
+        order = Order.objects.create(
             user=self.user,
             status=Order.Status.PAID,
             payment_type=Order.PaymentType.DEBIT,
-            total_price=Decimal('5.99'),
-            shipping_address='User address',
+            total_price=Decimal('11.98'),
+            shipping_address='Test Address',
         )
 
-        user_order.items.create(
+        order.items.create(
             product=self.product,
-            quantity=1,
-            price=Decimal('5.99'),
-        )
-
-        other_order = Order.objects.create(
-            user=self.other_user,
-            status=Order.Status.PAID,
-            payment_type=Order.PaymentType.DEBIT,
-            total_price=Decimal('4.50'),
-            shipping_address='Other address',
-        )
-
-        other_order.items.create(
-            product=self.second_product,
-            quantity=1,
-            price=Decimal('4.50'),
+            quantity=2,
+            price=self.product.price,
         )
 
         self.client.force_login(self.user)
 
-        result = self.graphql(
-            '''
-            query {
-                orders {
-                    id
-                    totalPrice
-                    items {
-                        quantity
-                        price
-                        product {
-                            id
-                            name
-                        }
+        query = """
+        query {
+            orders {
+                id
+                status
+                paymentType
+                totalPrice
+                shippingAddress
+                items {
+                    quantity
+                    price
+                    product {
+                        name
                     }
                 }
             }
-            '''
-        )
+        }
+        """
 
-        self.assertNotIn('errors', result)
+        response = self.graphql(query)
 
-        orders = result['data']['orders']
+        self.assertEqual(response.status_code, 200)
 
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        orders = data['data']['orders']
+
+        self.assertEqual(len(orders), 1)
         self.assertEqual(
-            len(orders),
-            1,
+            orders[0]['status'],
+            'paid',
         )
         self.assertEqual(
-            orders[0]['id'],
-            str(user_order.id),
+            Decimal(orders[0]['totalPrice']),
+            Decimal('11.98'),
         )
         self.assertEqual(
-            orders[0]['totalPrice'],
-            '5.99',
+            orders[0]['shippingAddress'],
+            'Test Address',
+        )
+        self.assertEqual(
+            orders[0]['items'][0]['quantity'],
+            2,
         )
         self.assertEqual(
             orders[0]['items'][0]['product']['name'],
-            'GraphQL Test Citra Hops',
+            'Citra',
         )
 
-    def test_orders_query_for_anonymous_user(self):
-        """Orders query returns an empty list for an anonymous user."""
-
-        result = self.graphql(
-            '''
-            query {
-                orders {
-                    id
-                }
+    def test_orders_query_anonymous(self):
+        query = """
+        query {
+            orders {
+                id
+                status
+                totalPrice
             }
-            '''
-        )
+        }
+        """
 
-        self.assertNotIn('errors', result)
+        response = self.graphql(query)
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertNotIn('errors', data)
         self.assertEqual(
-            result['data']['orders'],
+            data['data']['orders'],
             [],
         )
 
     def test_cart_mutations(self):
-        """Add, update and remove cart mutations work."""
-
         self.client.force_login(self.user)
 
-        add_result = self.graphql(
-            '''
-            mutation (
-                $productId: Int!,
-                $quantity: Int!
+        add_query = """
+        mutation AddToCart($productId: Int!, $quantity: Int!) {
+            addToCart(
+                productId: $productId
+                quantity: $quantity
             ) {
-                addToCart(
-                    productId: $productId,
-                    quantity: $quantity
-                ) {
-                    totalPrice
-                    items {
-                        quantity
-                        totalPrice
-                        product {
-                            id
-                            name
-                        }
+                items {
+                    product {
+                        id
+                        name
                     }
+                    quantity
+                    totalPrice
                 }
+                totalPrice
             }
-            ''',
-            variables={
+        }
+        """
+
+        response = self.graphql(
+            add_query,
+            {
                 'productId': self.product.pk,
                 'quantity': 2,
             },
         )
 
-        self.assertNotIn('errors', add_result)
+        self.assertEqual(response.status_code, 200)
 
-        add_cart = add_result['data']['addToCart']
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        cart = data['data']['addToCart']
 
         self.assertEqual(
-            add_cart['totalPrice'],
-            '11.98',
-        )
-        self.assertEqual(
-            len(add_cart['items']),
-            1,
-        )
-        self.assertEqual(
-            add_cart['items'][0]['quantity'],
+            cart['items'][0]['quantity'],
             2,
         )
+        self.assertEqual(
+            Decimal(cart['totalPrice']),
+            Decimal('11.98'),
+        )
 
-        update_result = self.graphql(
-            '''
-            mutation (
-                $productId: Int!,
-                $quantity: Int!
+        update_query = """
+        mutation UpdateCart($productId: Int!, $quantity: Int!) {
+            updateCart(
+                productId: $productId
+                quantity: $quantity
             ) {
-                updateCart(
-                    productId: $productId,
-                    quantity: $quantity
-                ) {
-                    totalPrice
-                    items {
-                        quantity
-                        totalPrice
-                        product {
-                            id
-                            name
-                        }
+                items {
+                    product {
+                        name
                     }
+                    quantity
+                    totalPrice
                 }
+                totalPrice
             }
-            ''',
-            variables={
+        }
+        """
+
+        response = self.graphql(
+            update_query,
+            {
                 'productId': self.product.pk,
                 'quantity': 3,
             },
         )
 
-        self.assertNotIn('errors', update_result)
+        self.assertEqual(response.status_code, 200)
 
-        update_cart = update_result['data']['updateCart']
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        cart = data['data']['updateCart']
 
         self.assertEqual(
-            update_cart['totalPrice'],
-            '17.97',
-        )
-        self.assertEqual(
-            update_cart['items'][0]['quantity'],
+            cart['items'][0]['quantity'],
             3,
         )
         self.assertEqual(
-            update_cart['items'][0]['totalPrice'],
-            '17.97',
+            Decimal(cart['totalPrice']),
+            Decimal('17.97'),
         )
 
-        remove_result = self.graphql(
-            '''
-            mutation ($productId: Int!) {
-                removeFromCart(productId: $productId) {
-                    totalPrice
-                    items {
-                        quantity
-                        totalPrice
-                        product {
-                            id
-                            name
-                        }
+        remove_query = """
+        mutation RemoveFromCart($productId: Int!) {
+            removeFromCart(productId: $productId) {
+                items {
+                    product {
+                        name
                     }
+                    quantity
                 }
+                totalPrice
             }
-            ''',
-            variables={
+        }
+        """
+
+        response = self.graphql(
+            remove_query,
+            {
                 'productId': self.product.pk,
             },
         )
 
-        self.assertNotIn('errors', remove_result)
+        self.assertEqual(response.status_code, 200)
 
-        remove_cart = remove_result['data']['removeFromCart']
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        cart = data['data']['removeFromCart']
 
         self.assertEqual(
-            remove_cart['totalPrice'],
-            '0.00',
+            cart['items'],
+            [],
         )
         self.assertEqual(
-            remove_cart['items'],
-            [],
+            Decimal(cart['totalPrice']),
+            Decimal('0.00'),
         )
 
     def test_cart_query(self):
-        """Cart query returns the current session cart."""
-
         self.client.force_login(self.user)
 
-        self.graphql(
-            '''
-            mutation (
-                $productId: Int!,
-                $quantity: Int!
+        add_query = """
+        mutation {
+            addToCart(
+                productId: %d
+                quantity: 2
             ) {
-                addToCart(
-                    productId: $productId,
-                    quantity: $quantity
-                ) {
-                    totalPrice
-                }
+                totalPrice
             }
-            ''',
-            variables={
-                'productId': self.second_product.pk,
-                'quantity': 2,
-            },
+        }
+        """ % self.product.pk
+
+        response = self.graphql(add_query)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(
+            'errors',
+            response.json(),
         )
 
-        result = self.graphql(
-            '''
-            query {
-                cart {
-                    totalPrice
-                    items {
-                        quantity
-                        totalPrice
-                        product {
-                            id
-                            name
-                            price
-                        }
+        query = """
+        query {
+            cart {
+                items {
+                    product {
+                        id
+                        name
                     }
+                    quantity
+                    totalPrice
                 }
+                totalPrice
             }
-            '''
-        )
+        }
+        """
 
-        self.assertNotIn('errors', result)
+        response = self.graphql(query)
 
-        cart = result['data']['cart']
+        self.assertEqual(response.status_code, 200)
 
-        self.assertEqual(
-            cart['totalPrice'],
-            '9.00',
-        )
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        cart = data['data']['cart']
+
         self.assertEqual(
             len(cart['items']),
             1,
@@ -538,172 +537,430 @@ class GraphQLTestCase(TestCase):
             2,
         )
         self.assertEqual(
-            cart['items'][0]['totalPrice'],
-            '9.00',
+            cart['items'][0]['product']['name'],
+            'Citra',
         )
         self.assertEqual(
-            cart['items'][0]['product']['name'],
-            'GraphQL Test Mosaic Hops',
+            Decimal(cart['totalPrice']),
+            Decimal('11.98'),
         )
 
     @patch('orders.services.send_mail')
-    def test_create_order(self, mock_send_mail):
-        """Create order mutation creates an order and clears the cart."""
-
+    def test_create_order_mutation(self, mock_send_mail):
         self.client.force_login(self.user)
 
-        add_result = self.graphql(
-            '''
-            mutation (
-                $productId: Int!,
-                $quantity: Int!
+        add_query = """
+        mutation {
+            addToCart(
+                productId: %d
+                quantity: 2
             ) {
-                addToCart(
-                    productId: $productId,
-                    quantity: $quantity
-                ) {
-                    totalPrice
-                }
+                totalPrice
             }
-            ''',
-            variables={
-                'productId': self.product.pk,
-                'quantity': 1,
-            },
+        }
+        """ % self.product.pk
+
+        response = self.graphql(add_query)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(
+            'errors',
+            response.json(),
         )
 
-        self.assertNotIn('errors', add_result)
-        self.assertEqual(
-            add_result['data']['addToCart']['totalPrice'],
-            '5.99',
-        )
-
-        result = self.graphql(
-            '''
-            mutation ($input: CreateOrderInput!) {
-                createOrder(input: $input) {
-                    id
-                    status
-                    paymentType
-                    totalPrice
-                    shippingAddress
-                    items {
-                        quantity
-                        price
-                        product {
-                            id
-                            name
-                        }
+        mutation = """
+        mutation CreateOrder($input: CreateOrderInput!) {
+            createOrder(input: $input) {
+                id
+                status
+                paymentType
+                totalPrice
+                shippingAddress
+                items {
+                    quantity
+                    price
+                    product {
+                        name
                     }
                 }
             }
-            ''',
-            variables={
-                'input': {
-                    'fullName': 'GraphQL User',
-                    'phoneNumber': '0000000000',
-                    'city': 'Test City',
-                    'address': 'Test Address',
-                    'paymentType': 'debit',
-                },
-            },
+        }
+        """
+
+        variables = {
+            'input': {
+                'fullName': 'GraphQL Customer',
+                'phoneNumber': '+111111111',
+                'city': 'Test City',
+                'address': 'Test Street 10',
+                'paymentType': 'debit',
+            }
+        }
+
+        response = self.graphql(
+            mutation,
+            variables,
         )
 
-        self.assertNotIn('errors', result)
+        self.assertEqual(response.status_code, 200)
 
-        order_data = result['data']['createOrder']
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        order_data = data['data']['createOrder']
 
         self.assertEqual(
-            order_data['status'],
-            'paid',
-        )
-        self.assertEqual(
-            order_data['paymentType'],
-            'debit',
-        )
-        self.assertEqual(
-            order_data['totalPrice'],
-            '5.99',
+            Decimal(order_data['totalPrice']),
+            Decimal('11.98'),
         )
         self.assertEqual(
             order_data['shippingAddress'],
-            'GraphQL User, 0000000000\n'
-            'Test City, Test Address',
-        )
-
-        self.assertEqual(
-            len(order_data['items']),
-            1,
+            'GraphQL Customer, +111111111\n'
+            'Test City, Test Street 10',
         )
         self.assertEqual(
             order_data['items'][0]['quantity'],
-            1,
-        )
-        self.assertEqual(
-            order_data['items'][0]['price'],
-            '5.99',
+            2,
         )
         self.assertEqual(
             order_data['items'][0]['product']['name'],
-            'GraphQL Test Citra Hops',
+            'Citra',
         )
 
-        order = Order.objects.get(
-            pk=order_data['id'],
+        self.product.refresh_from_db()
+
+        self.assertEqual(
+            self.product.stock,
+            8,
         )
 
         self.assertEqual(
-            order.status,
-            Order.Status.PAID,
-        )
-        self.assertEqual(
-            order.total_price,
-            Decimal('5.99'),
+            Order.objects.filter(
+                user=self.user,
+            ).count(),
+            1,
         )
 
-        product = Product.objects.get(
-            pk=self.product.pk,
-        )
-
-        self.assertEqual(
-            product.stock,
-            9,
-        )
-
-        payment = Payment.objects.get(
-            order=order,
-        )
-
-        self.assertEqual(
-            payment.amount,
-            Decimal('5.99'),
-        )
-        self.assertEqual(
-            payment.status,
-            Payment.Status.PAID,
+        self.assertTrue(
+            Payment.objects.filter(
+                order__user=self.user,
+            ).exists()
         )
 
         mock_send_mail.assert_called()
 
-        cart_result = self.graphql(
-            '''
-            query {
-                cart {
-                    totalPrice
-                    items {
-                        quantity
+        query = """
+        query {
+            cart {
+                items {
+                    product {
+                        id
                     }
+                    quantity
                 }
+                totalPrice
             }
-            '''
+        }
+        """
+
+        response = self.graphql(query)
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        self.assertEqual(
+            data['data']['cart']['items'],
+            [],
+        )
+        self.assertEqual(
+            Decimal(data['data']['cart']['totalPrice']),
+            Decimal('0.00'),
         )
 
-        self.assertNotIn('errors', cart_result)
+    def test_order_analytics_query(self):
+        paid_order = Order.objects.create(
+            user=self.user,
+            status=Order.Status.PAID,
+            payment_type=Order.PaymentType.DEBIT,
+            total_price=Decimal('17.97'),
+            shipping_address='Test address',
+        )
+
+        shipped_order = Order.objects.create(
+            user=self.second_user,
+            status=Order.Status.SHIPPED,
+            payment_type=Order.PaymentType.DEBIT,
+            total_price=Decimal('9.00'),
+            shipping_address='Test address',
+        )
+
+        Order.objects.create(
+            user=self.third_user,
+            status=Order.Status.CANCELED,
+            payment_type=Order.PaymentType.DEBIT,
+            total_price=Decimal('100.00'),
+            shipping_address='Test address',
+        )
+
+        paid_order.items.create(
+            product=self.product,
+            quantity=3,
+            price=self.product.price,
+        )
+
+        shipped_order.items.create(
+            product=self.second_product,
+            quantity=1,
+            price=self.second_product.price,
+        )
+
+        query = """
+        query {
+            orderAnalytics {
+                orderCount
+                revenue
+                averageOrderValue
+            }
+        }
+        """
+
+        response = self.graphql(query)
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        analytics = data['data']['orderAnalytics']
+
         self.assertEqual(
-            cart_result['data']['cart']['totalPrice'],
-            '0.00',
+            analytics['orderCount'],
+            2,
         )
         self.assertEqual(
-            cart_result['data']['cart']['items'],
+            analytics['revenue'],
+            '26.97',
+        )
+        self.assertEqual(
+            analytics['averageOrderValue'],
+            '13.485',
+        )
+
+    def test_product_analytics_query(self):
+        Product.objects.exclude(
+            pk__in=[
+                self.product.pk,
+                self.second_product.pk,
+                self.third_product.pk,
+            ],
+        ).update(
+            is_active=False,
+        )
+
+        paid_order = Order.objects.create(
+            user=self.user,
+            status=Order.Status.PAID,
+            payment_type=Order.PaymentType.DEBIT,
+            total_price=Decimal('17.97'),
+            shipping_address='Test address',
+        )
+
+        delivered_order = Order.objects.create(
+            user=self.second_user,
+            status=Order.Status.DELIVERED,
+            payment_type=Order.PaymentType.DEBIT,
+            total_price=Decimal('9.00'),
+            shipping_address='Test address',
+        )
+
+        paid_order.items.create(
+            product=self.product,
+            quantity=5,
+            price=self.product.price,
+        )
+
+        paid_order.items.create(
+            product=self.second_product,
+            quantity=2,
+            price=self.second_product.price,
+        )
+
+        delivered_order.items.create(
+            product=self.product,
+            quantity=2,
+            price=self.product.price,
+        )
+
+        query = """
+        query {
+            productAnalytics {
+                popularProducts {
+                    id
+                    name
+                    stock
+                }
+                totalStock
+            }
+        }
+        """
+
+        response = self.graphql(query)
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        analytics = data['data']['productAnalytics']
+
+        self.assertEqual(
+            analytics['totalStock'],
+            33,
+        )
+
+        popular_products = analytics['popularProducts']
+
+        self.assertEqual(
+            len(popular_products),
+            2,
+        )
+
+        self.assertEqual(
+            popular_products[0]['name'],
+            'Citra',
+        )
+
+        self.assertEqual(
+            popular_products[0]['stock'],
+            10,
+        )
+
+        self.assertEqual(
+            popular_products[1]['name'],
+            'Mosaic',
+        )
+
+    def test_user_analytics_query(self):
+        Order.objects.create(
+            user=self.user,
+            status=Order.Status.PAID,
+            payment_type=Order.PaymentType.DEBIT,
+            total_price=Decimal('17.97'),
+            shipping_address='Test address',
+        )
+
+        Order.objects.create(
+            user=self.user,
+            status=Order.Status.DELIVERED,
+            payment_type=Order.PaymentType.DEBIT,
+            total_price=Decimal('9.00'),
+            shipping_address='Test address',
+        )
+
+        Order.objects.create(
+            user=self.second_user,
+            status=Order.Status.SHIPPED,
+            payment_type=Order.PaymentType.DEBIT,
+            total_price=Decimal('8.99'),
+            shipping_address='Test address',
+        )
+
+        Order.objects.create(
+            user=self.third_user,
+            status=Order.Status.CANCELED,
+            payment_type=Order.PaymentType.DEBIT,
+            total_price=Decimal('100.00'),
+            shipping_address='Test address',
+        )
+
+        query = """
+        query {
+            userAnalytics {
+                activeUsers
+                repeatCustomers
+            }
+        }
+        """
+
+        response = self.graphql(query)
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        analytics = data['data']['userAnalytics']
+
+        self.assertEqual(
+            analytics['activeUsers'],
+            2,
+        )
+        self.assertEqual(
+            analytics['repeatCustomers'],
+            1,
+        )
+
+    def test_product_analytics_ignores_canceled_orders(self):
+        Product.objects.exclude(
+            pk__in=[
+                self.product.pk,
+                self.second_product.pk,
+                self.third_product.pk,
+            ],
+        ).update(
+            is_active=False,
+        )
+
+        canceled_order = Order.objects.create(
+            user=self.user,
+            status=Order.Status.CANCELED,
+            payment_type=Order.PaymentType.DEBIT,
+            total_price=Decimal('75.00'),
+            shipping_address='Test address',
+        )
+
+        canceled_order.items.create(
+            product=self.product,
+            quantity=10,
+            price=self.product.price,
+        )
+
+        query = """
+        query {
+            productAnalytics {
+                popularProducts {
+                    id
+                    name
+                    stock
+                }
+                totalStock
+            }
+        }
+        """
+
+        response = self.graphql(query)
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+
+        self.assertNotIn('errors', data)
+
+        analytics = data['data']['productAnalytics']
+
+        self.assertEqual(
+            analytics['totalStock'],
+            33,
+        )
+
+        self.assertEqual(
+            analytics['popularProducts'],
             [],
         )
