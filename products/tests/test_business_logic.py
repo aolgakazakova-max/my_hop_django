@@ -16,7 +16,7 @@ User = get_user_model()
 class ProductPagesTests(TestCase):
     def setUp(self):
         self.category = Category.objects.create(
-            name='РўРµСЃС‚РѕРІС‹Р№ С…РјРµР»СЊ',
+            name='Тестовый хмель',
             slug='test-hops',
         )
 
